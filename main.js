@@ -23,6 +23,12 @@ var directionalLightDirectionUniform;
 var directionalLightColourUniform;
 var directionalLightIntensityUniform;
 
+// For FPS calculation
+var lastFrameTime;
+var startTime;
+var fpsElement; // paragraph element
+
+
 // Angle of the camera
 // in left/right, up/down, tilt
 var angle = [0.0, -0.6, 0.0];
@@ -30,12 +36,8 @@ var angle = [0.0, -0.6, 0.0];
 // Camera position
 var cameraPos = [0.0, 7.0, 10.0];
 
-// For FPS calculation
-var lastFrameTime;
-var startTime;
-var fpsElement; // paragraph element
-
-
+var lights = [];
+var directionalLights = [];
 
 // Light and DirectionalLight objects.
 function Light(pos, colour, intensity) {
@@ -49,9 +51,6 @@ function DirectionalLight(direction, colour, intensity) {
     this.colour = colour;
     this.intensity = intensity;
 }
-
-var lights = [];
-var directionalLights = [];
 
 function setLightUniforms(lightArray) {
     gl.uniform1f(numLightsUniform, lightArray.count);
@@ -70,7 +69,7 @@ function setLightUniforms(lightArray) {
     // Now we set the values of the variables.
     gl.uniform3fv(lightPosUniform, new Float32Array(pos));
     gl.uniform3fv(lightColourUniform, new Float32Array(colour));
-    gl.uniform3fv(lightIntensityUniform, new Float32Array(intensity));
+    gl.uniform1fv(lightIntensityUniform, new Float32Array(intensity));
 }
 
 function setDirectionalLightUniforms(directionalLightArray) {
@@ -80,13 +79,13 @@ function setDirectionalLightUniforms(directionalLightArray) {
     var intensity = [];
     for (var i=0; i<directionalLightArray.count; ++i) {
         direction = direction.concat(directionalLightArray[i].direction);
-        colour = colour.concat(lightArray[i].colour);
+        colour = colour.concat(directionalLightArray[i].colour);
         // since intensity is just a float we can do this
-        intensity.push(lightArray[i].intensity);
+        intensity.push(directionalLightArray[i].intensity);
     }
-    gl.uniform3fv(directionalLightPosUniform, new Float32Array(direction));
+    gl.uniform3fv(directionalLightDirectionUniform, new Float32Array(direction));
     gl.uniform3fv(directionalLightColourUniform, new Float32Array(colour));
-    gl.uniform3fv(directionalLightIntensityUniform, new Float32Array(intensity));
+	gl.uniform1fv(directionalLightIntensityUniform, new Float32Array(intensity));
 }
 
 
@@ -200,8 +199,11 @@ function createProgram(gl, vertexShader, fragmentShader) {
 // the scene, and does most of
 // the game logic.
 function render(time) {
+	// setup the browser for the
+	// next frame
     requestAnimationFrame(render);
     
+	// sanity check
     if (program === null) {
         // The program hasn't loaded yet! :O
         return;
@@ -219,14 +221,13 @@ function render(time) {
     // Set the uniforms
     gl.uniform2f(screenSizeUniform, canvas.width, canvas.height);
     gl.uniform3fv(cameraPosUniform, new Float32Array(cameraPos));
-    setLightUniforms();
-    setDirectionalLightUniforms();
+    setLightUniforms(lights);
+    setDirectionalLightUniforms(directionalLights);
     
     // We need to calculate the rotation matrix from
     // view to world.
     // First get the transformation matrix.
     var m = mult3(mult3(rotateY(angle[0]), rotateX(angle[1])), rotateZ(angle[2]));
-    console.log(m);
     // We transpose the matrix to make WebGL happy.
     m = trans3(m);
     // Now set the uniform.
@@ -363,6 +364,11 @@ function initGame() {
             directionalLightDirectionUniform = gl.getUniformLocation(program, "directionalLightDirection");
             directionalLightColourUniform = gl.getUniformLocation(program, "directionalLightColour");
             directionalLightIntensityUniform = gl.getUniformLocation(program, "directionalLightIntensity");
+
+			// Now we start the render loop
+			startTime = performance.now();
+    		lastFrameTime = startTime;
+    		requestAnimationFrame(render);
         };
         fragReq.open("GET", "fragment-shader.glsl");
         fragReq.responseType = "text";
@@ -371,10 +377,4 @@ function initGame() {
     vertReq.open("GET", "vertex-shader.glsl");
     vertReq.responseType = "text";
     vertReq.send();
-    
-    
-    // Now we start the render loop
-    startTime = performance.now();
-    lastFrameTime = startTime;
-    requestAnimationFrame(render);
 }

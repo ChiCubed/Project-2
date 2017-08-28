@@ -11,6 +11,7 @@ uniform vec3 cameraPos;
 uniform mat3 viewToWorld;
 
 const int MAX_MARCH_STEPS = 128;
+const int MAX_SHADOW_MARCH_STEPS = 128;
 const float NEAR_DIST = 0.01;
 const float FAR_DIST = 100.0;
 const float FOV = 45.0;
@@ -128,11 +129,97 @@ HitPoint castRay(vec3 camera, vec3 direction, float near, float far) {
 }
 
 
+// Calculates the amount that a pixel
+// is in shadow from a light.
+// Based on http://www.iquilezles.org/www/articles/rmshadows/rmshadows.htm
+float shadow(vec3 p, vec3 direction, float near, float far, float k) {
+	float depth=near;
+	float dist =0.0;
+	// currently 1.0 - shadowing amount
+	float res = 1.0;
+	// prevent overstepping
+	float s = far * 32.0 / float(MAX_MARCH_STEPS);
+	// while loops are not allowed
+	for (int i=0; i<MAX_SHADOW_MARCH_STEPS; ++i) {
+		// similar to normal sphere marching
+		// but we keep track of res
+		dist = scene(p + depth*direction).dist;
+		res = min(res, k*dist/depth);
+
+		depth += min(dist, s*8.0);
+		if (depth >= far || dist < EPSILON) {
+			break;
+		}
+	}
+
+	return clamp(res, 0.0, 1.0);
+}
+
+
 // Phong lighting of a point.
+// Includes attenuation i.e. lights
+// are weaker from father away.
+// See Wikipedia for an explanation
+// of how this algorithm works.
 vec3 phongLighting(vec3 diffuse_col, vec3 specular_col, float alpha,
                    vec3 p, vec3 normal, vec3 cam, vec3 viewerNormal,
                    vec3 lightPos, vec3 lightColour, float intensity) {
-    
+	// The normal at the point
+    vec3 N = normal;
+	// This is used for attenuation
+	// calculation.
+	vec3 relativePos = lightPos - p;
+	vec3 L = normalize(relativePos);
+	vec3 V = viewerNormal;
+	vec3 R = normalize(reflect(-L, N));
+
+	float dotLN = dot(L, N);
+	float dotRV = dot(R, V);
+
+	if (dotLN < 0.0) {
+		// The surface is facing away
+		// from the light i.e.
+		// receives no light.
+		// Since this function returns
+		// the colour, obviously
+		// this pixel is completely black.
+		return vec3(0.0);
+	}
+
+	float squareDist = dot(relativePos, relativePos);
+
+	// This contains (1 / light range)^2.
+	// If different lights have different
+	// ranges, this should be precalculated
+	// before every frame.
+	float reciprocalLightRangeSquared = 0.003;
+	float attenuatedIntensity = 1.0 - squareDist * reciprocalLightRangeSquared;
+
+	if (attenuatedIntensity < 0.0) {
+		// The point is clearly completely
+		// unlit, since it is outside
+		// the light's range.
+		return vec3(0.0);
+	}
+
+	// Now square and multiply by
+	// the light's actual intensity.
+	attenuatedIntensity *= attenuatedIntensity * intensity;
+
+	if (dotRV < 0.0) {
+		// The surface has no specular lighting
+		return (diffuse_col*dotLN)*lightColour * attenuatedIntensity;
+	}
+
+	// Approximate the specular component
+	const int gamma = 8;
+	const int gamma_log2 = 3;
+	float calculated_specular = (1.0 - alpha * (1.0-dotRV)/float(gamma));
+	for (int i=0; i<gamma_log2; ++i) {
+		calculated_specular *= calculated_specular;
+	}
+
+	return (diffuse_col*dotLN + specular_col*calculated_specular)*lightColour * attenuatedIntensity;
 }
 
 
@@ -140,7 +227,28 @@ vec3 phongLighting(vec3 diffuse_col, vec3 specular_col, float alpha,
 vec3 directionalPhongLighting(vec3 diffuse_col, vec3 specular_col, float alpha,
                               vec3 p, vec3 normal, vec3 cam, vec3 viewerNormal,
                               vec3 lightDirection, vec3 lightColour, float intensity) {
-    
+    vec3 N = normal;
+	vec3 L = -lightDirection;
+	vec3 V = viewerNormal;
+	vec3 R = normalize(reflect(-L, N));
+
+	float dotLN = dot(L, N);
+	float dotRV = dot(R, V);
+
+	if (dotLN < 0.0) return vec3(0.0);
+	// Attenuation doesn't make sense
+	// with directional lights, so
+	// we omit it.
+	if (dotRV < 0.0) return (diffuse_col*dotLN)*lightColour*intensity;
+
+	const int gamma = 8;
+	const int gamma_log2 = 3;
+	float calculated_specular = (1.0 - alpha * (1.0-dotRV)/float(gamma));
+	for (int i=0; i<gamma_log2; ++i) {
+		calculated_specular *= calculated_specular;
+	}
+
+	return (diffuse_col*dotLN + specular_col*calculated_specular)*lightColour*intensity;
 }
 
 
@@ -160,15 +268,46 @@ vec3 lighting(vec3 ambient_col, vec3 diffuse_col, vec3 specular_col,
     vec3 normal = estimateNormal(p);
     vec3 viewerNormal = normalize(cam - p);
     
-    // normal lighting
-    for (int i=0; i<numLights; ++i) {
-        
+    // point lighting
+	// for loops must have constant
+	// expressions to compare with,
+	// so we must work around this.
+    for (int i=0; i<MAX_NUM_LIGHTS; ++i) {
+		// workaround
+		if (i >= numLights) break;
+
+        vec3 tmp = phongLighting(diffuse_col, specular_col, alpha, p, normal, cam, viewerNormal, lightPos[i], lightColour[i], lightIntensity[i]);
+
+		// if the point is lit at all:
+		if (tmp != vec3(0.0)) {
+			// calculate shadowing
+			vec3 relPos = lightPos[i] - p;
+			float dist = length(relPos);
+			tmp *= shadow(p, relPos/dist, EPSILON*16.0, dist, 8.0);
+		}
+
+		colour += tmp;
     }
     
     // directional lighting
-    for (int i=0; i<numDirectionalLights; ++i) {
-        
+    for (int i=0; i<MAX_NUM_DIRECTIONAL_LIGHTS; ++i) {
+		if (i >= numDirectionalLights) break;
+        vec3 tmp = directionalPhongLighting(diffuse_col, specular_col, alpha, p, normal, cam, viewerNormal, directionalLightDirection[i], directionalLightColour[i], directionalLightIntensity[i]);
+
+		if (tmp != vec3(0.0)) {
+			// We arbitrarily set the
+			// 'far' plane to 100,
+			// so if an object is not
+			// in shadow within 100
+			// units it is not
+			// in shadow at all.
+			tmp *= shadow(p, -directionalLightDirection[i], EPSILON*16.0, 100.0, 8.0);
+		}
+
+		colour += tmp;
     }
+
+	return colour;
 }
 
 
