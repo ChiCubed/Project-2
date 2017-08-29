@@ -13,32 +13,6 @@ var screenSizeUniform;
 var cameraPosUniform;
 var viewToWorldUniform;
 
-var numLightsUniform;
-var lightPosUniform;
-var lightColourUniform;
-var lightIntensityUniform;
-
-var numDirectionalLightsUniform;
-var directionalLightDirectionUniform;
-var directionalLightColourUniform;
-var directionalLightIntensityUniform;
-
-// For FPS calculation
-var lastFrameTime;
-var startTime;
-var fpsElement; // paragraph element
-
-
-// Angle of the camera
-// in left/right, up/down, tilt
-var angle = [0.0, -0.6, 0.0];
-
-// Camera position
-var cameraPos = [0.0, 7.0, 10.0];
-
-var lights = [];
-var directionalLights = [];
-
 // Light and DirectionalLight objects.
 function Light(pos, colour, intensity) {
     this.pos = pos;
@@ -52,36 +26,82 @@ function DirectionalLight(direction, colour, intensity) {
     this.intensity = intensity;
 }
 
+var numLightsUniform;
+var lightPosUniform;
+var lightColourUniform;
+var lightIntensityUniform;
+
+var numDirectionalLightsUniform;
+var directionalLightDirectionUniform;
+var directionalLightColourUniform;
+var directionalLightIntensityUniform;
+
+var MAX_NUM_LIGHTS = 32;
+var MAX_NUM_DIRECTIONAL_LIGHTS = 32;
+
+var lights = [new Light([0,3,0],[1,0,0],1.0)];
+var directionalLights = [];
+
+
+// For FPS calculation
+var lastFrameTime;
+var startTime;
+var fpsElement; // paragraph element
+
+// Angle of the camera
+// in left/right, up/down, tilt
+var angle = [0.0, -0.6, 0.0];
+
+// Camera position
+var cameraPos = [0.0, 7.0, 10.0];
+
 function setLightUniforms(lightArray) {
-    gl.uniform1f(numLightsUniform, lightArray.count);
+    gl.uniform1i(numLightsUniform, lightArray.length);
     // Three _flat_ arrays storing the:
     // positions, colours and intensities
     // of the lights.
-    var pos = [];
-    var colour = [];
-    var intensity = [];
-    for (var i=0; i<lightArray.count; ++i) {
-        pos = pos.concat(lightArray[i].pos);
-        colour = colour.concat(lightArray[i].colour);
+	if (lightArray.length > MAX_NUM_LIGHTS) {
+		console.log("Warning: Too many lights");
+		return;
+	}
+	// We don't worry about actually
+	// initialising these with values
+	// since GLSL only uses the first
+	// [lightArray.count] elements
+	// of these arrays.
+    var pos = new Array(MAX_NUM_LIGHTS * 3);
+    var colour = new Array(MAX_NUM_LIGHTS * 3);
+    var intensity = new Array(MAX_NUM_LIGHTS);
+    for (var i=0; i<lightArray.length; ++i) {
+		for (var x=0; x<3; ++x) {
+        	pos[i*3+x]=lightArray[i].pos[x];
+			colour[i*3+x]=lightArray[i].colour[x];
+		}
         // since intensity is just a float we can do this
-        intensity.push(lightArray[i].intensity);
+        intensity[i] = lightArray[i].intensity;
     }
-    // Now we set the values of the variables.
+    // Now we set the values of the uniforms.
     gl.uniform3fv(lightPosUniform, new Float32Array(pos));
     gl.uniform3fv(lightColourUniform, new Float32Array(colour));
     gl.uniform1fv(lightIntensityUniform, new Float32Array(intensity));
 }
 
 function setDirectionalLightUniforms(directionalLightArray) {
-    gl.uniform1f(numDirectionalLightsUniform, directionalLightArray.count);
-    var direction = [];
-    var colour = [];
-    var intensity = [];
-    for (var i=0; i<directionalLightArray.count; ++i) {
-        direction = direction.concat(directionalLightArray[i].direction);
-        colour = colour.concat(directionalLightArray[i].colour);
+    gl.uniform1i(numDirectionalLightsUniform, directionalLightArray.length);
+	if(directionalLightArray.length>MAX_NUM_DIRECTIONAL_LIGHTS){
+		console.log("Warning: Too many directional lights");
+		return;
+	}
+    var direction = new Array(MAX_NUM_DIRECTIONAL_LIGHTS * 3);
+    var colour = new Array(MAX_NUM_DIRECTIONAL_LIGHTS * 3);
+    var intensity = new Array(MAX_NUM_DIRECTIONAL_LIGHTS);
+    for (var i=0; i<directionalLightArray.length; ++i) {
+        for (var x=0; x<3; ++x) {
+        	direction[i*3+x]=directionalLightArray[i].direction[x];
+			colour[i*3+x]=directionalLightArray[i].colour[x];
+		}
         // since intensity is just a float we can do this
-        intensity.push(directionalLightArray[i].intensity);
+        intensity[i] = directionalLightArray[i].intensity;
     }
     gl.uniform3fv(directionalLightDirectionUniform, new Float32Array(direction));
     gl.uniform3fv(directionalLightColourUniform, new Float32Array(colour));

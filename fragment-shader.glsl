@@ -16,6 +16,7 @@ const float NEAR_DIST = 0.01;
 const float FAR_DIST = 100.0;
 const float FOV = 45.0;
 const float EPSILON = 0.001;
+const float NORMAL_EPSILON = 0.000001;
 const float stepScale = 0.90;
 
 // For lighting of materials.
@@ -108,7 +109,7 @@ HitPoint scene(vec3 p) {
 // Estimate normal at a point
 // for lighting calcs
 vec3 estimateNormal(vec3 p) {
-    vec2 eps = vec2(EPSILON, 0.0);
+    vec2 eps = vec2(NORMAL_EPSILON, 0.0);
     return normalize(vec3(
                 scene(p+eps.xyy).dist - scene(p-eps.xyy).dist,
                 scene(p+eps.yxy).dist - scene(p-eps.yxy).dist,
