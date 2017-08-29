@@ -11,7 +11,10 @@ var program = null; // WebGL shader program.
 // the uniforms.
 var screenSizeUniform;
 var cameraPosUniform;
+var playerPosUniform;
+var invPlayerRotationUniform;
 var viewToWorldUniform;
+var timeUniform;
 
 // Light and DirectionalLight objects.
 function Light(pos, colour, intensity) {
@@ -26,6 +29,7 @@ function DirectionalLight(direction, colour, intensity) {
     this.intensity = intensity;
 }
 
+// More binding points
 var numLightsUniform;
 var lightPosUniform;
 var lightColourUniform;
@@ -53,7 +57,13 @@ var fpsElement; // paragraph element
 var angle = [0.0, -0.6, 0.0];
 
 // Camera position
-var cameraPos = [0.0, 7.0, 10.0];
+var cameraPos = [0.0, 15.0, 15.0];
+// Player position
+var playerPos = [0.0, 0.0, 0.0];
+// Player rotation
+// about the z-axis,
+// i.e. tilt.
+var playerRotation = 0.0;
 
 function setLightUniforms(lightArray) {
     gl.uniform1i(numLightsUniform, lightArray.length);
@@ -241,9 +251,29 @@ function render(time) {
     // Set the uniforms
     gl.uniform2f(screenSizeUniform, canvas.width, canvas.height);
     gl.uniform3fv(cameraPosUniform, new Float32Array(cameraPos));
+    gl.uniform3fv(playerPosUniform, new Float32Array(playerPos));
+    // divide by 1000: ms -> s
+    gl.uniform1f(timeUniform,(time-startTime)/1000.0);
     setLightUniforms(lights);
     setDirectionalLightUniforms(directionalLights);
     
+    // We calculate the rotation matrix for player rotation.
+    // First calculate the transformation matrix.
+    var pm = rotateZ(playerRotation);
+
+    // We should transpose it here to
+    // ensure the data is in the correct
+    // format for WebGL to use.
+    // However, then in the fragment shader
+    // we would have to find the inverse
+    // of the matrix. The inverse is just
+    // the matrix's transpose, so we do
+    // two transforms, which is the same
+    // as doing nothing.
+
+    // Set uniform
+    gl.uniformMatrix3fv(invPlayerRotationUniform, false, new Float32Array(pm));
+
     // We need to calculate the rotation matrix from
     // view to world.
     // First get the transformation matrix.
@@ -373,7 +403,10 @@ function initGame() {
             // to pass data to/from the shader.
             screenSizeUniform = gl.getUniformLocation(program, "screenSize");
             cameraPosUniform = gl.getUniformLocation(program, "cameraPos");
+            playerPosUniform = gl.getUniformLocation(program, "playerPos");
+            invPlayerRotationUniform = gl.getUniformLocation(program, "invPlayerRot");
             viewToWorldUniform = gl.getUniformLocation(program, "viewToWorld");
+            timeUniform = gl.getUniformLocation(program, "time");
             
             numLightsUniform = gl.getUniformLocation(program, "numLights");
             lightPosUniform = gl.getUniformLocation(program, "lightPos");

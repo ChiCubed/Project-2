@@ -5,10 +5,17 @@ precision mediump float;
 uniform vec2 screenSize;
 // camera position
 uniform vec3 cameraPos;
+// player position
+uniform vec3 playerPos;
+// INVERSE player rotation matrix
+uniform mat3 invPlayerRot;
 // rotation matrix
 // from camera view
 // to the world view.
 uniform mat3 viewToWorld;
+// current time,
+// in seconds
+uniform float time;
 
 const int MAX_MARCH_STEPS = 128;
 const int MAX_SHADOW_MARCH_STEPS = 128;
@@ -100,9 +107,10 @@ HitPoint scene(vec3 p) {
          c = vec3( 0,0,-1),
          d = vec3( 1,0, 0.3);
     float playerDist = min(
-        triangle(p, a, b, c),
-        triangle(p, b, c, d)
+        triangle(invPlayerRot*(p-playerPos), a, b, c),
+        triangle(invPlayerRot*(p-playerPos), b, c, d)
     );
+
     return HitPoint(playerDist, 0);
 }
 
@@ -184,6 +192,8 @@ vec3 phongLighting(vec3 diffuse_col, vec3 specular_col, float alpha,
 		// Since this function returns
 		// the colour, obviously
 		// this pixel is completely black.
+        // (or the contribution from this
+        //  light, at least, is nothing.)
 		return vec3(0.0);
 	}
 
@@ -284,7 +294,14 @@ vec3 lighting(vec3 ambient_col, vec3 diffuse_col, vec3 specular_col,
 			// calculate shadowing
 			vec3 relPos = lightPos[i] - p;
 			float dist = length(relPos);
-			tmp *= shadow(p, relPos/dist, EPSILON*16.0, dist, 8.0);
+            vec3 norm = relPos / dist;
+            // The reason we add norm*EPSILON*2
+            // is to move the start point for the
+            // shadowing slightly away from the
+            // point which we originally intersected,
+            // to prevent artefacts when the normal is
+            // almost perpendicular to the light.
+			tmp *= shadow(p + norm*EPSILON*2.0, norm, EPSILON*2.0, dist, 8.0);
 		}
 
 		colour += tmp;
@@ -302,7 +319,7 @@ vec3 lighting(vec3 ambient_col, vec3 diffuse_col, vec3 specular_col,
 			// in shadow within 100
 			// units it is not
 			// in shadow at all.
-			tmp *= shadow(p, -directionalLightDirection[i], EPSILON*16.0, 100.0, 8.0);
+			tmp *= shadow(p - directionalLightDirection[i]*EPSILON*2.0, -directionalLightDirection[i], EPSILON*2.0, 100.0, 8.0);
 		}
 
 		colour += tmp;
