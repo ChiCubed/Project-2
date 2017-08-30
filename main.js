@@ -16,11 +16,30 @@ var invPlayerRotationUniform;
 var viewToWorldUniform;
 var timeUniform;
 
+// Setup the geometry.
+// This is just a flat plane;
+// the rendering is done in
+// the fragment shader.
+// This contains two triangles which
+// together make the plane.
+var vertices = [
+   -1.0, 1.0, // top left
+    1.0, 1.0, // top right
+    1.0,-1.0, // bottom right
+   -1.0, 1.0, // top left
+    1.0,-1.0, // bottom right
+   -1.0,-1.0  // bottom left
+];
+
+// Shader sources
+var vertShaderSrc, fragShaderSrc;
+
 // Light and DirectionalLight objects.
-function Light(pos, colour, intensity) {
+function Light(pos, colour, intensity, range) {
     this.pos = pos;
     this.colour = colour;
     this.intensity = intensity;
+    this.range = range;
 }
 
 function DirectionalLight(direction, colour, intensity) {
@@ -29,37 +48,62 @@ function DirectionalLight(direction, colour, intensity) {
     this.intensity = intensity;
 }
 
+// Material object.
+function Material(diffuse, specular, shininess) {
+    this.diffuse = diffuse;
+    this.specular = specular;
+    this.shininess = shininess;
+}
+
 // More binding points
 var numLightsUniform;
 var lightPosUniform;
 var lightColourUniform;
 var lightIntensityUniform;
+var reciprocalLightRangeSquaredUniform;
 
 var numDirectionalLightsUniform;
 var directionalLightDirectionUniform;
 var directionalLightColourUniform;
 var directionalLightIntensityUniform;
 
+var numMaterialsUniform;
+var materialDiffuseColourUniform;
+var materialSpecularColourUniform;
+var materialShininessUniform;
+
 var MAX_NUM_LIGHTS = 32;
 var MAX_NUM_DIRECTIONAL_LIGHTS = 32;
+var MAX_NUM_MATERIALS = 32;
 
-var lights = [new Light([0,3,0],[1,0,0],1.0)];
+var lights = [
+    new Light([0,3,1],[1,1,1],1.5,40.0),
+    new Light([0,4,-60],[0.8,0.8,1],1.0,60.0)
+];
 var directionalLights = [];
+var materials = [
+    new Material([1,0,0],[1,1,1],8.0), // player
+    new Material([0.35,0.25,0.7],[0.7,0.7,1],2.0), // wall
+    new Material([0.2,0.2,0.3],[1,1,1],4.0) // floor
+];
 
 
 // For FPS calculation
 var lastFrameTime;
 var startTime;
+var requestId; // request ID for the new animation frame
 var fpsElement; // paragraph element
 
 // Angle of the camera
 // in left/right, up/down, tilt
-var angle = [0.0, -0.6, 0.0];
+var angle = [0.0, -0.1, 0.0];
 
 // Camera position
-var cameraPos = [0.0, 15.0, 15.0];
+var cameraPos = [0.0, 4.5, 20.0];
 // Player position
 var playerPos = [0.0, 0.0, 0.0];
+// Player forwards speed
+var playerSpeed = 1.0;
 // Player rotation
 // about the z-axis,
 // i.e. tilt.
@@ -108,6 +152,7 @@ function setLightUniforms(lightArray) {
     var pos = new Array(MAX_NUM_LIGHTS * 3);
     var colour = new Array(MAX_NUM_LIGHTS * 3);
     var intensity = new Array(MAX_NUM_LIGHTS);
+    var recRangeSqr = new Array(MAX_NUM_LIGHTS);
     for (var i=0; i<lightArray.length; ++i) {
 		for (var x=0; x<3; ++x) {
         	pos[i*3+x]=lightArray[i].pos[x];
@@ -115,11 +160,13 @@ function setLightUniforms(lightArray) {
 		}
         // since intensity is just a float we can do this
         intensity[i] = lightArray[i].intensity;
+        recRangeSqr[i] = 1/(lightArray[i].range*lightArray[i].range);
     }
     // Now we set the values of the uniforms.
     gl.uniform3fv(lightPosUniform, new Float32Array(pos));
     gl.uniform3fv(lightColourUniform, new Float32Array(colour));
     gl.uniform1fv(lightIntensityUniform, new Float32Array(intensity));
+    gl.uniform1fv(reciprocalLightRangeSquaredUniform, new Float32Array(recRangeSqr));
 }
 
 function setDirectionalLightUniforms(directionalLightArray) {
@@ -142,6 +189,27 @@ function setDirectionalLightUniforms(directionalLightArray) {
     gl.uniform3fv(directionalLightDirectionUniform, new Float32Array(direction));
     gl.uniform3fv(directionalLightColourUniform, new Float32Array(colour));
 	gl.uniform1fv(directionalLightIntensityUniform, new Float32Array(intensity));
+}
+
+function setMaterialUniforms(materialArray) {
+    gl.uniform1i(numMaterialsUniform, materialArray.length);
+    if (materialArray.length>MAX_NUM_MATERIALS) {
+        console.log("Warning: Too many materials");
+        return;
+    }
+    var diffuse = new Array(MAX_NUM_MATERIALS * 3);
+    var specular = new Array(MAX_NUM_MATERIALS * 3);
+    var shininess = new Array(MAX_NUM_MATERIALS);
+    for (var i=0; i<materialArray.length; ++i) {
+        for (var x=0; x<3; ++x) {
+            diffuse[i*3+x]=materialArray[i].diffuse[x];
+            specular[i*3+x]=materialArray[i].specular[x];
+        }
+        shininess[i]=materialArray[i].shininess;
+    }
+    gl.uniform3fv(materialDiffuseColourUniform, new Float32Array(diffuse));
+    gl.uniform3fv(materialSpecularColourUniform, new Float32Array(specular));
+    gl.uniform1fv(materialShininessUniform, new Float32Array(shininess));
 }
 
 
@@ -224,10 +292,13 @@ function createShader(gl, type, source) {
         return shader;
     }
     
-    // Otherwise we log what went wrong.
-    console.log(gl.getShaderInfoLog(shader));
+    // if the WebGL context wasn't lost:
+    if (!gl.isContextLost()) {
+        // Otherwise we log what went wrong.
+        console.log(gl.getShaderInfoLog(shader));
     
-    gl.deleteShader(shader);
+        gl.deleteShader(shader);
+    }
 }
 
 
@@ -244,9 +315,78 @@ function createProgram(gl, vertexShader, fragmentShader) {
         return program;
     }
     
-    console.log(gl.getProgramInfoLog(program));
+    if (!gl.isContextLost()) {
+        console.log(gl.getProgramInfoLog(program));
+
+        gl.deleteProgram(program);
+    }
+}
+
+
+function setupWebGLState() {
+    verticesBuffer = gl.createBuffer();
+    // gl.ARRAY_BUFFER is a 'bind point'
+    // for WebGL, which indicates where
+    // the data is located.
+    gl.bindBuffer(gl.ARRAY_BUFFER, verticesBuffer);
+    // We convert positions to a 32-bit float array.
+    // gl.STATIC_DRAW indicates that the plane
+    // will not move during the render loop.
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, verticesBuffer);
     
-    gl.deleteProgram(program);
+    var vertShader = createShader(gl, gl.VERTEX_SHADER, vertShaderSrc);
+    var fragShader = createShader(gl, gl.FRAGMENT_SHADER, fragShaderSrc);
+
+    // Now we 'link' them into a program
+    // which can be used by WebGL.
+    program = createProgram(gl, vertShader, fragShader);
+
+    // The shader program now needs to know
+    // where the data being used in the
+    // vertex shader (namely the
+    // position attribute) is coming from.
+    // We set that here.
+    var positionAttribLoc = gl.getAttribLocation(program, 'position');
+    gl.enableVertexAttribArray(positionAttribLoc);
+
+    // We now tell WebGL how to extract
+    // data out of the array verticesBuffer
+    // and give it to the vertex shader.
+    // The three main arguments are the
+    // first three. In order these indicate:
+    // 1.  where to bind the current ARRAY_BUFFER to
+    // 2.  how many components there are per attribute
+    //       (in this case two)
+    // 3.  the type of the data
+    gl.vertexAttribPointer(positionAttribLoc, 2, gl.FLOAT, false, 0, 0);
+
+
+    // We also get the uniform locations,
+    // to pass data to/from the shader.
+    screenSizeUniform = gl.getUniformLocation(program, "screenSize");
+    cameraPosUniform = gl.getUniformLocation(program, "cameraPos");
+    playerPosUniform = gl.getUniformLocation(program, "playerPos");
+    invPlayerRotationUniform = gl.getUniformLocation(program, "invPlayerRot");
+    viewToWorldUniform = gl.getUniformLocation(program, "viewToWorld");
+    timeUniform = gl.getUniformLocation(program, "time");
+
+    numLightsUniform = gl.getUniformLocation(program, "numLights");
+    lightPosUniform = gl.getUniformLocation(program, "lightPos");
+    lightColourUniform = gl.getUniformLocation(program, "lightColour");
+    lightIntensityUniform = gl.getUniformLocation(program, "lightIntensity");
+    reciprocalLightRangeSquaredUniform = gl.getUniformLocation(program, "reciprocalLightRangeSquared");
+
+    numDirectionalLightsUniform = gl.getUniformLocation(program, "numDirectionalLights");
+    directionalLightDirectionUniform = gl.getUniformLocation(program, "directionalLightDirection");
+    directionalLightColourUniform = gl.getUniformLocation(program, "directionalLightColour");
+    directionalLightIntensityUniform = gl.getUniformLocation(program, "directionalLightIntensity");
+
+    numMaterialsUniform = gl.getUniformLocation(program, "numMaterials");
+    materialDiffuseColourUniform = gl.getUniformLocation(program, "materialDiffuseColour");
+    materialSpecularColourUniform = gl.getUniformLocation(program, "materialSpecularColour");
+    materialShininessUniform = gl.getUniformLocation(program, "materialShininess");
 }
 
 
@@ -255,10 +395,6 @@ function createProgram(gl, vertexShader, fragmentShader) {
 // the scene, and does most of
 // the game logic.
 function render(time) {
-	// setup the browser for the
-	// next frame
-    requestAnimationFrame(render);
-
 	var deltaTime = time - lastFrameTime;
     
 	// sanity check
@@ -284,6 +420,7 @@ function render(time) {
     gl.uniform1f(timeUniform,(time-startTime)/1000.0);
     setLightUniforms(lights);
     setDirectionalLightUniforms(directionalLights);
+    setMaterialUniforms(materials);
     
     // We calculate the rotation matrix for player rotation.
     // First calculate the transformation matrix.
@@ -317,22 +454,37 @@ function render(time) {
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 
 
-	// We rotate the player based on
-    // which keys are pressed.
-	// If both are pressed there should
-	// be no rotation.
-	if (rightPressed && !leftPressed) {
-		// tilt right
-		// rotation is anticlockwise
-		// so this is negative, not positive.
-		playerRotation -= deltaTime*rotationSpeed*0.007*(playerRotation+maxRotation);
-	} else if (leftPressed && !rightPressed) {
-		// tilt left
-		playerRotation += deltaTime*rotationSpeed*0.007*(-playerRotation+maxRotation);
-	} else {
-		// tilt to center
-		playerRotation -= playerRotation*deltaTime*rotationSpeed*0.007;
-	}
+    var isMovingRight = (rightPressed && !leftPressed);
+    var isMovingLeft  = (leftPressed && !rightPressed);
+    // If the player is touching the wall, we
+    // want to rotate them back in the other direction,
+    // to bounce them off.
+    // We use 4.5 because this is
+    // (wall distance from center) - (half player width).
+    // Also if the player is trying to move _away_ from
+    // the wall we don't want them to get stuck.
+    if (playerPos[0] >  4.5 && !isMovingLeft ||
+        playerPos[0] < -4.5 && !isMovingRight) {
+        playerRotation = -playerRotation*0.9;
+    } else {
+        // We're not touching the wall.
+	    // We rotate the player based on
+        // which keys are pressed.
+	    // If both are pressed there should
+	    // be no rotation.
+        if (isMovingRight) {
+            // tilt right
+            // rotation is anticlockwise
+            // so this is negative, not positive.
+            playerRotation -= deltaTime*rotationSpeed*0.007*(playerRotation+maxRotation);
+        } else if (isMovingLeft) {
+            // tilt left
+            playerRotation += deltaTime*rotationSpeed*0.007*(-playerRotation+maxRotation);
+        } else {
+            // tilt to center
+            playerRotation -= playerRotation*deltaTime*rotationSpeed*0.007;
+        }
+    }
 
 	// The player rotation and movement
 	// are linked, to make movement smooth.
@@ -343,11 +495,45 @@ function render(time) {
 	// is anticlockwise.
 	playerPos[0] -= (playerRotation/maxRotation)*deltaTime*movementSpeed*0.01;
     
+    // Move player forwards
+    playerPos[2] -= deltaTime*playerSpeed*0.02;
+
+    // Move the 'player light' to near the player
+    // We scale down the player position to prevent
+    // the light from getting close to a wall,
+    // which would cause artifacts.
+    lights[0].pos[0] = playerPos[0]*0.8;
+    lights[0].pos[1] = playerPos[1] + 3.0;
+    lights[0].pos[2] = playerPos[2] + 1.0;
+
+    // Also another light
+    lights[1].pos[0] = 0.0;
+    lights[1].pos[1] = playerPos[1] + 4.0;
+    lights[1].pos[2] = playerPos[2] - 60.0;
+
+    // Move camera to player
+    cameraPos[1] = playerPos[1] + 4.5;
+    cameraPos[2] = playerPos[2] + 20.0;
+
+    // ensure drawing is done
+    gl.finish();
+
+    // setup the browser for the
+	// next frame
+    requestId = requestAnimationFrame(render);
+
     // Now we do FPS calculation.
     var fps = 1000/deltaTime;
     fpsElement.innerHTML = "FPS: "+fps.toFixed(2);
     
     lastFrameTime = time;
+}
+
+
+function handleContextLost(event) {
+    event.preventDefault();
+    console.log('The WebGL context was lost.');
+    cancelAnimationFrame(requestId);
 }
 
 
@@ -366,33 +552,17 @@ function initGame() {
         return;
     }
     
+    // If the WebGL context is lost,
+    // we should reload.
+    canvas.addEventListener(
+        'webglcontextlost', handleContextLost, false
+    );
     
-    // Setup the geometry.
-    // This is just a flat plane;
-    // the rendering is done in
-    // the fragment shader.
-    // This contains two triangles which
-    // together make the plane.
-    var vertices = [
-        -1.0, 1.0, // top left
-         1.0, 1.0, // top right
-         1.0,-1.0, // bottom right
-        -1.0, 1.0, // top left
-         1.0,-1.0, // bottom right
-        -1.0,-1.0  // bottom left
-    ];
-    
-    verticesBuffer = gl.createBuffer();
-    // gl.ARRAY_BUFFER is a 'bind point'
-    // for WebGL, which indicates where
-    // the data is located.
-    gl.bindBuffer(gl.ARRAY_BUFFER, verticesBuffer);
-    // We convert positions to a 32-bit float array.
-    // gl.STATIC_DRAW indicates that the plane
-    // will not move during the render loop.
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-    
-    gl.bindBuffer(gl.ARRAY_BUFFER, verticesBuffer);
+    // When restored, we redo the
+    // setup stages.
+    canvas.addEventListener(
+        'webglcontextrestored', setupWebGLState, false
+    );
     
     
     // Now we create the shaders.
@@ -407,8 +577,7 @@ function initGame() {
     // since it will do most of the
     // rendering.
     
-    // Load the shader source.
-    var vertShaderSrc, fragShaderSrc;
+    // Load shader source.
     
     // We use some XMLHttpRequests.
     // We do this asynchronously,
@@ -426,51 +595,7 @@ function initGame() {
         fragReq.onload = function() {
             fragShaderSrc = this.response;
             
-            var vertShader = createShader(gl, gl.VERTEX_SHADER, vertShaderSrc);
-            var fragShader = createShader(gl, gl.FRAGMENT_SHADER, fragShaderSrc);
-    
-            // Now we 'link' them into a program
-            // which can be used by WebGL.
-            program = createProgram(gl, vertShader, fragShader);
-            
-            // The shader program now needs to know
-            // where the data being used in the
-            // vertex shader (namely the
-            // position attribute) is coming from.
-            // We set that here.
-            var positionAttribLoc = gl.getAttribLocation(program, 'position');
-            gl.enableVertexAttribArray(positionAttribLoc);
-
-            // We now tell WebGL how to extract
-            // data out of the array verticesBuffer
-            // and give it to the vertex shader.
-            // The three main arguments are the
-            // first three. In order these indicate:
-            // 1.  where to bind the current ARRAY_BUFFER to
-            // 2.  how many components there are per attribute
-            //       (in this case two)
-            // 3.  the type of the data
-            gl.vertexAttribPointer(positionAttribLoc, 2, gl.FLOAT, false, 0, 0);
-            
-            
-            // We also get the uniform locations,
-            // to pass data to/from the shader.
-            screenSizeUniform = gl.getUniformLocation(program, "screenSize");
-            cameraPosUniform = gl.getUniformLocation(program, "cameraPos");
-            playerPosUniform = gl.getUniformLocation(program, "playerPos");
-            invPlayerRotationUniform = gl.getUniformLocation(program, "invPlayerRot");
-            viewToWorldUniform = gl.getUniformLocation(program, "viewToWorld");
-            timeUniform = gl.getUniformLocation(program, "time");
-            
-            numLightsUniform = gl.getUniformLocation(program, "numLights");
-            lightPosUniform = gl.getUniformLocation(program, "lightPos");
-            lightColourUniform = gl.getUniformLocation(program, "lightColour");
-            lightIntensityUniform = gl.getUniformLocation(program, "lightIntensity");
-
-            numDirectionalLightsUniform = gl.getUniformLocation(program, "numDirectionalLights");
-            directionalLightDirectionUniform = gl.getUniformLocation(program, "directionalLightDirection");
-            directionalLightColourUniform = gl.getUniformLocation(program, "directionalLightColour");
-            directionalLightIntensityUniform = gl.getUniformLocation(program, "directionalLightIntensity");
+            setupWebGLState();
 
 			// Add event listeners
 			// for the movement buttons
@@ -480,7 +605,7 @@ function initGame() {
 			// Now we start the render loop
 			startTime = performance.now();
     		lastFrameTime = startTime;
-    		requestAnimationFrame(render);
+    		requestId = requestAnimationFrame(render);
         };
         fragReq.open("GET", "fragment-shader.glsl");
         fragReq.responseType = "text";

@@ -20,17 +20,14 @@ uniform float time;
 const int MAX_MARCH_STEPS = 128;
 const int MAX_SHADOW_MARCH_STEPS = 128;
 const float NEAR_DIST = 0.01;
-const float FAR_DIST = 100.0;
+const float FAR_DIST = 256.0;
 const float FOV = 45.0;
 const float EPSILON = 0.001;
-const float NORMAL_EPSILON = 0.000001;
+const float NORMAL_EPSILON = 0.0001;
 const float stepScale = 0.90;
 
 // For lighting of materials.
 vec3 AMBIENT_COLOUR = vec3(0.1,0.1,0.1);
-vec3 DIFFUSE_COLOUR = vec3(0.7,0.7,0.7);
-vec3 SPECULAR_COLOUR = vec3(1.0,1.0,1.0);
-float SHININESS = 8.0;
 float ambientIntensity = 1.0;
 
 
@@ -41,6 +38,7 @@ const int MAX_NUM_DIRECTIONAL_LIGHTS = 32;
 uniform vec3 lightPos[MAX_NUM_LIGHTS];
 uniform vec3 lightColour[MAX_NUM_LIGHTS];
 uniform float lightIntensity[MAX_NUM_LIGHTS];
+uniform float reciprocalLightRangeSquared[MAX_NUM_LIGHTS];
 
 uniform vec3 directionalLightDirection[MAX_NUM_DIRECTIONAL_LIGHTS];
 uniform vec3 directionalLightColour[MAX_NUM_DIRECTIONAL_LIGHTS];
@@ -48,6 +46,15 @@ uniform float directionalLightIntensity[MAX_NUM_DIRECTIONAL_LIGHTS];
 
 uniform int numLights;
 uniform int numDirectionalLights;
+
+// Materials
+const int MAX_NUM_MATERIALS = 32;
+
+uniform vec3 materialDiffuseColour[MAX_NUM_MATERIALS];
+uniform vec3 materialSpecularColour[MAX_NUM_MATERIALS];
+uniform float materialShininess[MAX_NUM_MATERIALS];
+
+uniform int numMaterials;
 
 
 struct HitPoint {
@@ -99,29 +106,56 @@ float triangle(vec3 p, vec3 a, vec3 b, vec3 c) {
 }
 
 
-HitPoint player(vec3 p) {
+float player(vec3 p) {
 	// player distance
     const vec3 a = vec3(-1,  0, 0.3),
                b = vec3( 0,0.1,   0),
-               c = vec3( 0,  0,  -1),
+               c = vec3( 0,  0,  -2),
                d = vec3( 1,  0, 0.3);
     float playerDist = min(
         triangle(p, a, b, c),
         triangle(p, b, c, d)
     );
 
-	return HitPoint(playerDist, 0);
+	return playerDist;
+}
+
+
+// smooth minimum.
+// can be used to 'blend' objects
+// http://www.iquilezles.org/www/articles/smin/smin.htm
+float smin(float a, float b, float k) {
+    float h = clamp(0.5 + 0.5*(b-a)/k, 0.0, 1.0);
+    return mix(b,a,h) - k*h*(1.0-h);
 }
     
 
 // Distance function for the scene
 HitPoint scene(vec3 p) {
-	// translate
-	p -= playerPos;
-	// rotate
-	p = invPlayerRot*p;
+    // player (material 0)
+    HitPoint playerHit  = HitPoint(player(invPlayerRot*(p - playerPos)),0);
+    // walls (material 1)
+    float wallDist = min(5.5-p.x, 5.5+p.x);
+    wallDist += sin(10.0*p.y)*sin(10.0*p.z)*0.01;
+    HitPoint wallHit    = HitPoint(wallDist,1);
+    // floor (material 2)
+    HitPoint floorHit   = HitPoint(2.0+p.y,2);
 
-    return player(p);
+    // ornaments (also material 2)
+    // repeated infinitely
+    vec3 mp = p;
+    mp.xz = mod(p.xz,vec2(8.0,8.0))-vec2(4.0,4.0);
+    mp.y += 2.0; // overlap floor
+    // creates spheres
+    float ornamentDist = length(mp)-0.5;
+
+    // we now want to 'blend' the spheres
+    // and the floor, to make some
+    // sort of lumps.
+    // we do this using the 'smooth min' function.
+    floorHit.dist = smin(floorHit.dist, ornamentDist, 0.5);
+
+    return min(playerHit,min(wallHit,floorHit));
 }
 
 // Estimate normal at a point
@@ -180,9 +214,12 @@ float shadow(vec3 p, vec3 direction, float near, float far, float k) {
 // are weaker from father away.
 // See Wikipedia for an explanation
 // of how this algorithm works.
+// reciprocalRangeSquared is
+// used for attenuation calculation.
 vec3 phongLighting(vec3 diffuse_col, vec3 specular_col, float alpha,
                    vec3 p, vec3 normal, vec3 cam, vec3 viewerNormal,
-                   vec3 lightPos, vec3 lightColour, float intensity) {
+                   vec3 lightPos, vec3 lightColour, float intensity,
+                   float recLightRangeSqr) {
 	// The normal at the point
     vec3 N = normal;
 	// This is used for attenuation
@@ -208,13 +245,7 @@ vec3 phongLighting(vec3 diffuse_col, vec3 specular_col, float alpha,
 	}
 
 	float squareDist = dot(relativePos, relativePos);
-
-	// This contains (1 / light range)^2.
-	// If different lights have different
-	// ranges, this should be precalculated
-	// before every frame.
-	float reciprocalLightRangeSquared = 0.003;
-	float attenuatedIntensity = 1.0 - squareDist * reciprocalLightRangeSquared;
+	float attenuatedIntensity = 1.0 - squareDist * recLightRangeSqr;
 
 	if (attenuatedIntensity < 0.0) {
 		// The point is clearly completely
@@ -278,7 +309,8 @@ vec3 directionalPhongLighting(vec3 diffuse_col, vec3 specular_col, float alpha,
 vec3 lighting(vec3 ambient_col, vec3 diffuse_col, vec3 specular_col,
               float alpha, vec3 p, vec3 cam, float ambientIntensity,
               vec3 lightPos[MAX_NUM_LIGHTS], vec3 lightColour[MAX_NUM_LIGHTS],
-              float lightIntensity[MAX_NUM_LIGHTS], int numLights,
+              float lightIntensity[MAX_NUM_LIGHTS],
+              float reciprocalLightRangeSquared[MAX_NUM_LIGHTS], int numLights,
               vec3 directionalLightDirection[MAX_NUM_DIRECTIONAL_LIGHTS],
               vec3 directionalLightColour[MAX_NUM_DIRECTIONAL_LIGHTS],
               float directionalLightIntensity[MAX_NUM_DIRECTIONAL_LIGHTS], int numDirectionalLights) {
@@ -297,21 +329,21 @@ vec3 lighting(vec3 ambient_col, vec3 diffuse_col, vec3 specular_col,
 		// workaround
 		if (i >= numLights) break;
 
-        vec3 tmp = phongLighting(diffuse_col, specular_col, alpha, p, normal, cam, viewerNormal, lightPos[i], lightColour[i], lightIntensity[i]);
+        vec3 tmp = phongLighting(diffuse_col, specular_col, alpha, p, normal, cam, viewerNormal, lightPos[i], lightColour[i], lightIntensity[i], reciprocalLightRangeSquared[i]);
 
 		// if the point is lit at all:
 		if (tmp != vec3(0.0)) {
 			// calculate shadowing
 			vec3 relPos = lightPos[i] - p;
 			float dist = length(relPos);
-            vec3 norm = relPos / dist;
+            vec3 relDir = relPos / dist;
             // The reason we add norm*EPSILON*2
             // is to move the start point for the
             // shadowing slightly away from the
             // point which we originally intersected,
             // to prevent artefacts when the normal is
             // almost perpendicular to the light.
-			tmp *= shadow(p + norm*EPSILON*2.0, norm, EPSILON*2.0, dist, 8.0);
+			tmp *= shadow(p + relDir*EPSILON*2.0, relDir, EPSILON*2.0, dist, 8.0);
 		}
 
 		colour += tmp;
@@ -376,11 +408,24 @@ void main() {
     
     // Cast a ray
     HitPoint result = castRay(cameraPos, worldRayDir, NEAR_DIST, FAR_DIST);
+    // Determine diffuse, specular and shininess.
+    // GLSL doesn't allow variable array indexing
+    // (e.g. materialDiffuseColour[result.id])
+    // so this is a kind of hacky workaround.
+    vec3 diffuse, specular;
+    float shininess;
+    for (int i=0; i<MAX_NUM_MATERIALS; ++i) {
+        if (i == result.id) {
+            diffuse = materialDiffuseColour[i];
+            specular = materialSpecularColour[i];
+            shininess = materialShininess[i];
+        }
+    }
     if (result.dist < FAR_DIST - EPSILON) {
         // Calculate colour based on lights
-        vec3 colour = lighting(AMBIENT_COLOUR, DIFFUSE_COLOUR, SPECULAR_COLOUR,
-                               SHININESS, cameraPos + worldRayDir*result.dist, cameraPos, ambientIntensity,
-                               lightPos, lightColour, lightIntensity, numLights,
+        vec3 colour = lighting(AMBIENT_COLOUR, diffuse, specular,
+                               shininess, cameraPos + worldRayDir*result.dist, cameraPos, ambientIntensity,
+                               lightPos, lightColour, lightIntensity, reciprocalLightRangeSquared, numLights,
                                directionalLightDirection, directionalLightColour, directionalLightIntensity, numDirectionalLights);
         gl_FragColor = vec4(colour,1);
     } else {
