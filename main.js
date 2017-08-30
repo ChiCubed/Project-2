@@ -65,6 +65,32 @@ var playerPos = [0.0, 0.0, 0.0];
 // i.e. tilt.
 var playerRotation = 0.0;
 
+// Rotation/movement speeds.
+var rotationSpeed = 1.0;
+var maxRotation = 0.4;
+var movementSpeed = 1.0;
+
+// whether the arrow keys are pressed
+var leftPressed = false;
+var rightPressed = false;
+
+// handlers for buttons
+function keyDownHandler(e) {
+	if (e.keyCode == 37) {
+		leftPressed = true;
+	} else if (e.keyCode == 39) {
+		rightPressed = true;
+	}
+}
+
+function keyUpHandler(e) {
+	if (e.keyCode == 37) {
+		leftPressed = false;
+	} else if (e.keyCode == 39) {
+		rightPressed = false;
+	}
+}
+
 function setLightUniforms(lightArray) {
     gl.uniform1i(numLightsUniform, lightArray.length);
     // Three _flat_ arrays storing the:
@@ -232,6 +258,8 @@ function render(time) {
 	// setup the browser for the
 	// next frame
     requestAnimationFrame(render);
+
+	var deltaTime = time - lastFrameTime;
     
 	// sanity check
     if (program === null) {
@@ -287,10 +315,36 @@ function render(time) {
     // The gl.TRIANGLES indicates to draw triangles;
     // the 6 indicates there are 6 vertices.
     gl.drawArrays(gl.TRIANGLES, 0, 6);
-    
+
+
+	// We rotate the player based on
+    // which keys are pressed.
+	// If both are pressed there should
+	// be no rotation.
+	if (rightPressed && !leftPressed) {
+		// tilt right
+		// rotation is anticlockwise
+		// so this is negative, not positive.
+		playerRotation -= deltaTime*rotationSpeed*0.007*(playerRotation+maxRotation);
+	} else if (leftPressed && !rightPressed) {
+		// tilt left
+		playerRotation += deltaTime*rotationSpeed*0.007*(-playerRotation+maxRotation);
+	} else {
+		// tilt to center
+		playerRotation -= playerRotation*deltaTime*rotationSpeed*0.007;
+	}
+
+	// The player rotation and movement
+	// are linked, to make movement smooth.
+	// In particular, the player moves
+	// based on their rotation.
+	// We subtract the player rotation
+	// instead of adding it since the rotation
+	// is anticlockwise.
+	playerPos[0] -= (playerRotation/maxRotation)*deltaTime*movementSpeed*0.01;
     
     // Now we do FPS calculation.
-    var fps = 1000/(time - lastFrameTime);
+    var fps = 1000/deltaTime;
     fpsElement.innerHTML = "FPS: "+fps.toFixed(2);
     
     lastFrameTime = time;
@@ -417,6 +471,11 @@ function initGame() {
             directionalLightDirectionUniform = gl.getUniformLocation(program, "directionalLightDirection");
             directionalLightColourUniform = gl.getUniformLocation(program, "directionalLightColour");
             directionalLightIntensityUniform = gl.getUniformLocation(program, "directionalLightIntensity");
+
+			// Add event listeners
+			// for the movement buttons
+			document.addEventListener("keydown", keyDownHandler, false);
+			document.addEventListener("keyup", keyUpHandler, false);
 
 			// Now we start the render loop
 			startTime = performance.now();

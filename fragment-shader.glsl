@@ -97,21 +97,31 @@ float triangle(vec3 p, vec3 a, vec3 b, vec3 c) {
         return sqrt(dot(nor,pa)*dot(nor,pa)/len2(nor));
     }
 }
+
+
+HitPoint player(vec3 p) {
+	// player distance
+    const vec3 a = vec3(-1,  0, 0.3),
+               b = vec3( 0,0.1,   0),
+               c = vec3( 0,  0,  -1),
+               d = vec3( 1,  0, 0.3);
+    float playerDist = min(
+        triangle(p, a, b, c),
+        triangle(p, b, c, d)
+    );
+
+	return HitPoint(playerDist, 0);
+}
     
 
 // Distance function for the scene
 HitPoint scene(vec3 p) {
-    // player distance
-    vec3 a = vec3(-1,0, 0.3),
-         b = vec3( 0,0.1, 0),
-         c = vec3( 0,0,-1),
-         d = vec3( 1,0, 0.3);
-    float playerDist = min(
-        triangle(invPlayerRot*(p-playerPos), a, b, c),
-        triangle(invPlayerRot*(p-playerPos), b, c, d)
-    );
+	// translate
+	p -= playerPos;
+	// rotate
+	p = invPlayerRot*p;
 
-    return HitPoint(playerDist, 0);
+    return player(p);
 }
 
 // Estimate normal at a point
