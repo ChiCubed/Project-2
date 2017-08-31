@@ -462,9 +462,15 @@ function render(time) {
     // We use 4.5 because this is
     // (wall distance from center) - (half player width).
     // Also if the player is trying to move _away_ from
-    // the wall we don't want them to get stuck.
+    // the wall, or they're rotated away,
+	// we don't want them to get stuck.
     if (playerPos[0] >  4.5 && !isMovingLeft ||
         playerPos[0] < -4.5 && !isMovingRight) {
+		if (playerPos[0] > 4.5) {
+			playerPos[0] = 4.5;
+		} else {
+			playerPos[0] =-4.5;
+		}
         playerRotation = -playerRotation*0.9;
     } else {
         // We're not touching the wall.
@@ -497,6 +503,9 @@ function render(time) {
     
     // Move player forwards
     playerPos[2] -= deltaTime*playerSpeed*0.02;
+
+	// Speed up
+	playerSpeed += deltaTime*0.00002;
 
     // Move the 'player light' to near the player
     // We scale down the player position to prevent

@@ -18,7 +18,7 @@ uniform mat3 viewToWorld;
 uniform float time;
 
 const int MAX_MARCH_STEPS = 128;
-const int MAX_SHADOW_MARCH_STEPS = 128;
+const int MAX_SHADOW_MARCH_STEPS = 32;
 const float NEAR_DIST = 0.01;
 const float FAR_DIST = 256.0;
 const float FOV = 45.0;
@@ -136,10 +136,10 @@ HitPoint scene(vec3 p) {
     HitPoint playerHit  = HitPoint(player(invPlayerRot*(p - playerPos)),0);
     // walls (material 1)
     float wallDist = min(5.5-p.x, 5.5+p.x);
-    wallDist += sin(10.0*p.y)*sin(10.0*p.z)*0.01;
+	wallDist += sin(10.0*p.y)*0.1;
     HitPoint wallHit    = HitPoint(wallDist,1);
     // floor (material 2)
-    HitPoint floorHit   = HitPoint(2.0+p.y,2);
+    HitPoint floorHit   = HitPoint(sin(time)*1.0+2.0+p.y,2);
 
     // ornaments (also material 2)
     // repeated infinitely
@@ -153,7 +153,7 @@ HitPoint scene(vec3 p) {
     // and the floor, to make some
     // sort of lumps.
     // we do this using the 'smooth min' function.
-    floorHit.dist = smin(floorHit.dist, ornamentDist, 0.5);
+    floorHit.dist = smin(floorHit.dist, ornamentDist, 0.4);
 
     return min(playerHit,min(wallHit,floorHit));
 }
