@@ -23,7 +23,7 @@ const float NEAR_DIST = 0.01;
 const float FAR_DIST = 256.0;
 const float FOV = 45.0;
 const float EPSILON = 0.001;
-const float NORMAL_EPSILON = 0.0001;
+const float NORMAL_EPSILON = 0.001;
 const float stepScale = 0.90;
 
 // For lighting of materials.
