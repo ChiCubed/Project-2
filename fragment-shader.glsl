@@ -133,19 +133,27 @@ float smin(float a, float b, float k) {
 // Distance function for the scene
 HitPoint scene(vec3 p) {
     // player (material 0)
-    HitPoint playerHit  = HitPoint(player(invPlayerRot*(p - playerPos)),0);
+	// We subtract an extra vector
+	// from p to translate the player
+	// up and down, to give it the
+	// appearance of floating.
+    HitPoint playerHit  = HitPoint(player(invPlayerRot*(p - playerPos - vec3(0,sin(time*2.0)*0.2,0))),0);
     // walls (material 1)
     float wallDist = min(5.5-p.x, 5.5+p.x);
 	wallDist += sin(10.0*p.y)*0.1;
     HitPoint wallHit    = HitPoint(wallDist,1);
     // floor (material 2)
-    HitPoint floorHit   = HitPoint(sin(time)*1.0+2.0+p.y,2);
+    HitPoint floorHit   = HitPoint(2.0+p.y,2);
 
     // ornaments (also material 2)
     // repeated infinitely
     vec3 mp = p;
     mp.xz = mod(p.xz,vec2(8.0,8.0))-vec2(4.0,4.0);
     mp.y += 2.0; // overlap floor
+	// this is guaranteed not to
+	// cause an overlap, because
+	// of the maximum derivative of sin.
+	mp.y += sin(time*2.0+p.z*0.3);
     // creates spheres
     float ornamentDist = length(mp)-0.5;
 

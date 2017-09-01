@@ -83,7 +83,7 @@ var lights = [
 var directionalLights = [];
 var materials = [
     new Material([1,0,0],[1,1,1],8.0), // player
-    new Material([0.35,0.25,0.7],[0.7,0.7,1],2.0), // wall
+    new Material([0.35,0.25,0.7],[0.7,0.7,0.7],2.0), // wall
     new Material([0.2,0.2,0.3],[1,1,1],4.0) // floor
 ];
 
@@ -234,6 +234,25 @@ function rotateX(a) {
     return [1,           0,            0,
             0, Math.cos(a), -Math.sin(a),
             0, Math.sin(a),  Math.cos(a)];
+}
+
+// For colour manipulation
+// https://stackoverflow.com/questions/8507885/shift-hue-of-an-rgb-color
+function rotateHue(c, h) {
+	var U = Math.cos(h * Math.PI/180);
+	var W = Math.sin(h * Math.PI/180);
+
+	return [
+		(0.299 + 0.701*U + 0.168*W)*c[0] +
+		(0.587 - 0.587*U + 0.330*W)*c[1] +
+		(0.114 - 0.114*U - 0.497*W)*c[2],
+		(0.299 - 0.299*U - 0.328*W)*c[0] +
+		(0.587 + 0.413*U + 0.035*W)*c[1] +
+		(0.114 - 0.114*U + 0.292*W)*c[2],
+		(0.299 - 0.300*U + 1.250*W)*c[0] +
+		(0.587 - 0.588*U - 1.050*W)*c[1] +
+		(0.114 + 0.886*U - 0.203*W)*c[2]
+	];
 }
 
 // Function to multiply two
@@ -433,7 +452,7 @@ function render(time) {
     // we would have to find the inverse
     // of the matrix. The inverse is just
     // the matrix's transpose, so we do
-    // two transforms, which is the same
+    // two transpositions, which is the same
     // as doing nothing.
 
     // Set uniform
@@ -506,6 +525,9 @@ function render(time) {
 
 	// Speed up
 	playerSpeed += deltaTime*0.00002;
+
+	// Rotate wall colour
+	materials[1].diffuse = rotateHue(materials[1].diffuse, deltaTime*0.01);
 
     // Move the 'player light' to near the player
     // We scale down the player position to prevent
