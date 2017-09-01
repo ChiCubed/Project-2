@@ -524,7 +524,7 @@ function render(time) {
     playerPos[2] -= deltaTime*playerSpeed*0.02;
 
 	// Speed up
-	playerSpeed += deltaTime*0.00002;
+	playerSpeed += deltaTime*0.000005;
 
 	// Rotate wall colour
 	materials[1].diffuse = rotateHue(materials[1].diffuse, deltaTime*0.01);
