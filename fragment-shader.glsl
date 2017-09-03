@@ -67,7 +67,7 @@ uniform int numObstacles;
 
 // for obstacles
 const vec3 BOX_SIZE = vec3(0.7, 0.5, 0.7);
-const vec2 TORUS_SIZE = vec2(0.8, 0.2);
+const vec3 TORUS_SIZE = vec3(1.5, 0.3, 0.0);
 
 
 struct HitPoint {
@@ -187,23 +187,30 @@ HitPoint scene(vec3 p) {
 	for (int i = 0; i < MAX_NUM_OBSTACLES; ++i) {
 		if (i == numObstacles) break;
 		vec3 tmp = obstacleInvRotation[i]*(p - obstaclePos[i]);
-		HitPoint thisObstacle = HitPoint(FAR_DIST,0);
+		HitPoint thisObstacle = HitPoint(0.0,0);
+
+        // In GLSL, conditionals are generally slow,
+        // so we try to not use them. Instead, we multiply
+        // by booleans.
+
 		// http://iquilezles.org/www/articles/distfunctions/distfunctions.htm
 
-		if (obstacleType[i] == 0) {
-			// just an ordinary box
-			thisObstacle = HitPoint(
-				length(max(abs(tmp)-BOX_SIZE,0.0)),
-				4
-			);
-		} else if (obstacleType[i] == 1) {
-			// Torus
-			vec2 q = vec2(length(tmp.xy)-TORUS_SIZE.x,tmp.z);
-			thisObstacle = HitPoint(
-				length(q)-TORUS_SIZE.y,
-				5
-			);
-		}
+        // just an ordinary box (obstacle ID 0, material 4)
+        thisObstacle.dist += length(max(abs(tmp)-BOX_SIZE,0.0)) * float(obstacleType[i] == 0);
+        thisObstacle.id += 4 * int(obstacleType[i] == 0);
+
+        // For torus (obstacle ID 1, material 5)
+        vec2 q = vec2(length(tmp.xy)-TORUS_SIZE.x,tmp.z);
+        thisObstacle.dist += (length(q)-TORUS_SIZE.y) * float(obstacleType[i] == 1);
+        thisObstacle.id += 5 * int(obstacleType[i] == 1);
+
+        // Note that, if an obstacle has an invalid
+        // ID, it'll cause the distance to be 0.
+        // There isn't a conditional here to check for that,
+        // since conditionals are expensive in GLSL.
+
+        // if (thisObstacle.dist == 0.0) thisObstacle.dist = FAR_DIST;
+
 		obstacleHit = min(obstacleHit, thisObstacle);
 	}
 

@@ -104,8 +104,8 @@ var materials = [
 	new Material([0.7,0.3,0.5],[1,1,1],8.0)
 ];
 var obstacles = [
-	new Obstacle([0,2,-100],0.0,0),
-	new Obstacle([0,2,-200],0.0,1)
+	new Obstacle([0,0,-100],0.0,0),
+	new Obstacle([0,0,-200],0.0,1)
 ];
 
 
@@ -532,8 +532,9 @@ function render(time) {
     var isMovingRight = (rightPressed && !leftPressed);
     var isMovingLeft  = (leftPressed && !rightPressed);
 
-	// how far out the wall is at the moment.
-	var wallDist = 4.5 + Math.sin(0.1 * playerPos[2]) * 0.5;
+    // how far out the wall is at the moment.
+    var wallDist = 4.5 + Math.sin(0.1 * playerPos[2]) * 0.5;
+
     // If the player is touching the wall, we
     // want to rotate them back in the other direction,
     // to bounce them off.
