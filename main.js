@@ -55,6 +55,14 @@ function Material(diffuse, specular, shininess) {
     this.shininess = shininess;
 }
 
+// Obstacle object.
+// Angle is around the z-axis.
+function Obstacle(pos, angle, type) {
+	this.pos = pos;
+	this.angle = angle;
+	this.type = type;
+}
+
 // More binding points
 var numLightsUniform;
 var lightPosUniform;
@@ -72,19 +80,32 @@ var materialDiffuseColourUniform;
 var materialSpecularColourUniform;
 var materialShininessUniform;
 
+var numObstaclesUniform;
+var obstaclePosUniform;
+var obstacleInvRotationUniform;
+var obstacleTypeUniform;
+
 var MAX_NUM_LIGHTS = 32;
 var MAX_NUM_DIRECTIONAL_LIGHTS = 32;
 var MAX_NUM_MATERIALS = 32;
+var MAX_NUM_OBSTACLES = 32;
 
 var lights = [
     new Light([0,3,1],[1,1,1],1.5,40.0),
-    new Light([0,4,-60],[0.8,0.8,1],1.0,60.0)
+    new Light([0,4,-60],[0.8,0.8,1],1.0,50.0)
 ];
 var directionalLights = [];
 var materials = [
     new Material([1,0,0],[1,1,1],8.0), // player
     new Material([0.35,0.25,0.7],[0.7,0.7,0.7],2.0), // wall
-    new Material([0.2,0.2,0.3],[1,1,1],4.0) // floor
+    new Material([0.2,0.2,0.3],[1,1,1],4.0), // floor
+	new Material([0.4,0.4,0.4],[1,1,1],2.0), // for checker pattern
+	new Material([0.3,0.6,0.4],[1,1,1],8.0), // obstacle 0
+	new Material([0.7,0.3,0.5],[1,1,1],8.0)
+];
+var obstacles = [
+	new Obstacle([0,2,-100],0.0,0),
+	new Obstacle([0,2,-200],0.0,1)
 ];
 
 
@@ -212,6 +233,34 @@ function setMaterialUniforms(materialArray) {
     gl.uniform1fv(materialShininessUniform, new Float32Array(shininess));
 }
 
+function setObstacleUniforms(obstacleArray) {
+	gl.uniform1i(numObstaclesUniform, obstacleArray.length);
+	if (obstacleArray.length>MAX_NUM_OBSTACLES) {
+		console.log("Warning: Too many obstacles");
+		return;
+	}
+	var pos = new Array(MAX_NUM_OBSTACLES * 3);
+	var invRot = new Array(MAX_NUM_OBSTACLES * 9);
+	var type = new Array(MAX_NUM_OBSTACLES);
+	var x; // inner loop var
+	for (var i=0; i<obstacleArray.length; ++i) {
+		for (x=0; x<3; ++x) {
+			pos[i*3+x]=obstacleArray[i].pos[x];
+		}
+		var rot = rotateZ(obstacleArray[i].angle);
+		// We want to give WebGL the transpose
+		// of the inverse of rot
+		// which is just rot.
+		for (x=0; x<9; ++x) {
+			invRot[i*9+x]=rot[x];
+		}
+		type[i]=obstacleArray[i].type;
+	}
+	gl.uniform3fv(obstaclePosUniform, new Float32Array(pos));
+	gl.uniformMatrix3fv(obstacleInvRotationUniform, false, new Float32Array(invRot));
+	gl.uniform1iv(obstacleTypeUniform, type);
+}
+
 
 // Utility function to generate
 // a matrix for a roll rotation
@@ -229,7 +278,7 @@ function rotateY(a) {
             -Math.sin(a), 0, Math.cos(a)];
 }
 
-// tilt up/down
+// pitch up/down
 function rotateX(a) {
     return [1,           0,            0,
             0, Math.cos(a), -Math.sin(a),
@@ -406,6 +455,11 @@ function setupWebGLState() {
     materialDiffuseColourUniform = gl.getUniformLocation(program, "materialDiffuseColour");
     materialSpecularColourUniform = gl.getUniformLocation(program, "materialSpecularColour");
     materialShininessUniform = gl.getUniformLocation(program, "materialShininess");
+
+	numObstaclesUniform = gl.getUniformLocation(program, "numObstacles");
+	obstaclePosUniform = gl.getUniformLocation(program, "obstaclePos");
+	obstacleInvRotationUniform = gl.getUniformLocation(program, "obstacleInvRotation");
+	obstacleTypeUniform = gl.getUniformLocation(program, "obstacleType");
 }
 
 
@@ -415,6 +469,7 @@ function setupWebGLState() {
 // the game logic.
 function render(time) {
 	var deltaTime = time - lastFrameTime;
+	var currentTime = time - startTime;
     
 	// sanity check
     if (program === null) {
@@ -436,10 +491,11 @@ function render(time) {
     gl.uniform3fv(cameraPosUniform, new Float32Array(cameraPos));
     gl.uniform3fv(playerPosUniform, new Float32Array(playerPos));
     // divide by 1000: ms -> s
-    gl.uniform1f(timeUniform,(time-startTime)/1000.0);
+    gl.uniform1f(timeUniform,currentTime/1000.0);
     setLightUniforms(lights);
     setDirectionalLightUniforms(directionalLights);
     setMaterialUniforms(materials);
+	setObstacleUniforms(obstacles);
     
     // We calculate the rotation matrix for player rotation.
     // First calculate the transformation matrix.
@@ -475,6 +531,9 @@ function render(time) {
 
     var isMovingRight = (rightPressed && !leftPressed);
     var isMovingLeft  = (leftPressed && !rightPressed);
+
+	// how far out the wall is at the moment.
+	var wallDist = 4.5 + Math.sin(0.1 * playerPos[2]) * 0.5;
     // If the player is touching the wall, we
     // want to rotate them back in the other direction,
     // to bounce them off.
@@ -483,12 +542,12 @@ function render(time) {
     // Also if the player is trying to move _away_ from
     // the wall, or they're rotated away,
 	// we don't want them to get stuck.
-    if (playerPos[0] >  4.5 && !isMovingLeft ||
-        playerPos[0] < -4.5 && !isMovingRight) {
-		if (playerPos[0] > 4.5) {
-			playerPos[0] = 4.5;
+    if (playerPos[0] >  wallDist && !isMovingLeft ||
+        playerPos[0] < -wallDist && !isMovingRight) {
+		if (playerPos[0] > wallDist) {
+			playerPos[0] = wallDist;
 		} else {
-			playerPos[0] =-4.5;
+			playerPos[0] =-wallDist;
 		}
         playerRotation = -playerRotation*0.9;
     } else {

@@ -18,12 +18,12 @@ uniform mat3 viewToWorld;
 uniform float time;
 
 const int MAX_MARCH_STEPS = 128;
-const int MAX_SHADOW_MARCH_STEPS = 32;
+const int MAX_SHADOW_MARCH_STEPS = 64;
 const float NEAR_DIST = 0.01;
 const float FAR_DIST = 256.0;
-const float FOV = 45.0;
+float FOV = 45.0;
 const float EPSILON = 0.001;
-const float NORMAL_EPSILON = 0.001;
+const float NORMAL_EPSILON = 0.01;
 const float stepScale = 0.90;
 
 // For lighting of materials.
@@ -55,6 +55,19 @@ uniform vec3 materialSpecularColour[MAX_NUM_MATERIALS];
 uniform float materialShininess[MAX_NUM_MATERIALS];
 
 uniform int numMaterials;
+
+// Obstacles
+const int MAX_NUM_OBSTACLES = 32;
+
+uniform vec3 obstaclePos[MAX_NUM_OBSTACLES];
+uniform mat3 obstacleInvRotation[MAX_NUM_OBSTACLES];
+uniform int obstacleType[MAX_NUM_OBSTACLES];
+
+uniform int numObstacles;
+
+// for obstacles
+const vec3 BOX_SIZE = vec3(0.7, 0.5, 0.7);
+const vec2 TORUS_SIZE = vec2(0.8, 0.2);
 
 
 struct HitPoint {
@@ -128,7 +141,6 @@ float smin(float a, float b, float k) {
     float h = clamp(0.5 + 0.5*(b-a)/k, 0.0, 1.0);
     return mix(b,a,h) - k*h*(1.0-h);
 }
-    
 
 // Distance function for the scene
 HitPoint scene(vec3 p) {
@@ -138,10 +150,15 @@ HitPoint scene(vec3 p) {
 	// up and down, to give it the
 	// appearance of floating.
     HitPoint playerHit  = HitPoint(player(invPlayerRot*(p - playerPos - vec3(0,sin(time*2.0)*0.2,0))),0);
-    // walls (material 1)
+    // walls (material 1 or 3)
     float wallDist = min(5.5-p.x, 5.5+p.x);
 	wallDist += sin(10.0*p.y)*0.1;
+	wallDist += sin(0.1*p.z)*0.5;
     HitPoint wallHit    = HitPoint(wallDist,1);
+	if (mod(p.z, 10.0) > 5.0) {
+		// checker pattern
+		wallHit.id = 3;
+	}
     // floor (material 2)
     HitPoint floorHit   = HitPoint(2.0+p.y,2);
 
@@ -163,7 +180,34 @@ HitPoint scene(vec3 p) {
     // we do this using the 'smooth min' function.
     floorHit.dist = smin(floorHit.dist, ornamentDist, 0.4);
 
-    return min(playerHit,min(wallHit,floorHit));
+
+	// Obstacles (materials 4+)
+	HitPoint obstacleHit = HitPoint(FAR_DIST,0);
+
+	for (int i = 0; i < MAX_NUM_OBSTACLES; ++i) {
+		if (i == numObstacles) break;
+		vec3 tmp = obstacleInvRotation[i]*(p - obstaclePos[i]);
+		HitPoint thisObstacle = HitPoint(FAR_DIST,0);
+		// http://iquilezles.org/www/articles/distfunctions/distfunctions.htm
+
+		if (obstacleType[i] == 0) {
+			// just an ordinary box
+			thisObstacle = HitPoint(
+				length(max(abs(tmp)-BOX_SIZE,0.0)),
+				4
+			);
+		} else if (obstacleType[i] == 1) {
+			// Torus
+			vec2 q = vec2(length(tmp.xy)-TORUS_SIZE.x,tmp.z);
+			thisObstacle = HitPoint(
+				length(q)-TORUS_SIZE.y,
+				5
+			);
+		}
+		obstacleHit = min(obstacleHit, thisObstacle);
+	}
+
+    return min(playerHit,min(wallHit,min(floorHit, obstacleHit)));
 }
 
 // Estimate normal at a point
@@ -437,6 +481,6 @@ void main() {
                                directionalLightDirection, directionalLightColour, directionalLightIntensity, numDirectionalLights);
         gl_FragColor = vec4(colour,1);
     } else {
-        gl_FragColor = vec4(0,0,0,1);
+        gl_FragColor = vec4(0.0,0,0,1);
     }
 }
