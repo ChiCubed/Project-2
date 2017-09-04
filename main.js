@@ -522,11 +522,6 @@ function render(time) {
     m = trans3(m);
     // Now set the uniform.
     gl.uniformMatrix3fv(viewToWorldUniform, false, new Float32Array(m));
-    
-    // Execute the shader programs
-    // The gl.TRIANGLES indicates to draw triangles;
-    // the 6 indicates there are 6 vertices.
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
 
 
     var isMovingRight = (rightPressed && !leftPressed);
@@ -605,6 +600,14 @@ function render(time) {
     // Move camera to player
     cameraPos[1] = playerPos[1] + 4.5;
     cameraPos[2] = playerPos[2] + 20.0;
+
+	// Execute the shader programs
+    // The gl.TRIANGLES indicates to draw triangles;
+    // the 6 indicates there are 6 vertices.
+	// This is done after updating to ensure
+	// the drawn version is as up-to-date
+	// as possible.
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
 
     // ensure drawing is done
     gl.finish();

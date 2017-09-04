@@ -193,16 +193,18 @@ HitPoint scene(vec3 p) {
         // so we try to not use them. Instead, we multiply
         // by booleans.
 
+		float x = float(obstacleType[i]);
+
 		// http://iquilezles.org/www/articles/distfunctions/distfunctions.htm
 
         // just an ordinary box (obstacle ID 0, material 4)
-        thisObstacle.dist += length(max(abs(tmp)-BOX_SIZE,0.0)) * float(obstacleType[i] == 0);
-        thisObstacle.id += 4 * int(obstacleType[i] == 0);
+        thisObstacle.dist += length(max(abs(tmp)-BOX_SIZE,0.0)) * (1.0 - abs(sign(x)));
+        thisObstacle.id += 4 * int(x == 0.0);
 
         // For torus (obstacle ID 1, material 5)
         vec2 q = vec2(length(tmp.xy)-TORUS_SIZE.x,tmp.z);
-        thisObstacle.dist += (length(q)-TORUS_SIZE.y) * float(obstacleType[i] == 1);
-        thisObstacle.id += 5 * int(obstacleType[i] == 1);
+        thisObstacle.dist += (length(q)-TORUS_SIZE.y) * (1.0 - abs(sign(x - 1.0)));
+        thisObstacle.id += 5 * int(x == 1.0);
 
         // Note that, if an obstacle has an invalid
         // ID, it'll cause the distance to be 0.
