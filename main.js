@@ -135,6 +135,11 @@ var rotationSpeed = 1.0;
 var maxRotation = 0.4;
 var movementSpeed = 1.0;
 
+// Projectile.
+var relativeProjectileSpeed = 1.0;
+var projectilePos = null;
+var projectileExists = false;
+
 // whether the arrow keys are pressed
 var leftPressed = false;
 var rightPressed = false;
@@ -614,7 +619,7 @@ function render(time) {
 
     // setup the browser for the
 	// next frame
-    requestId = requestAnimationFrame(render);
+    requestId = requestAnimationFrame(render, canvas);
 
     // Now we do FPS calculation.
     var fps = 1000/deltaTime;
@@ -699,7 +704,7 @@ function initGame() {
 			// Now we start the render loop
 			startTime = performance.now();
     		lastFrameTime = startTime;
-    		requestId = requestAnimationFrame(render);
+    		requestId = requestAnimationFrame(render, canvas);
         };
         fragReq.open("GET", "fragment-shader.glsl");
         fragReq.responseType = "text";
