@@ -65,6 +65,11 @@ uniform int obstacleType[MAX_NUM_OBSTACLES];
 
 uniform int numObstacles;
 
+// Projectile
+uniform vec3 projectilePos;
+
+uniform bool projectileExists;
+
 // for obstacles
 const vec3 BOX_SIZE = vec3(0.7, 0.5, 0.7);
 const vec3 TORUS_SIZE = vec3(1.5, 0.3, 0.0);
@@ -142,14 +147,59 @@ float smin(float a, float b, float k) {
     return mix(b,a,h) - k*h*(1.0-h);
 }
 
+// Distance function for everything except the
+// player, projectile, walls, floor, and ornaments.
+// (Essentially, this is the obstacles.)
+HitPoint sceneObstacles(vec3 p) {
+    // Obstacles (materials 5+)
+	HitPoint obstacleHit = HitPoint(FAR_DIST,0);
+
+	for (int i = 0; i < MAX_NUM_OBSTACLES; ++i) {
+		if (i == numObstacles) break;
+		vec3 tmp = obstacleInvRotation[i]*(p - obstaclePos[i]);
+		HitPoint thisObstacle = HitPoint(0.0,0);
+
+        // In GLSL, conditionals are generally slow,
+        // so we try to not use them. Instead, we multiply
+        // by booleans.
+
+		float x = float(obstacleType[i]);
+
+		// http://iquilezles.org/www/articles/distfunctions/distfunctions.htm
+
+        // just an ordinary box (obstacle ID 0, material 4)
+        thisObstacle.dist += length(max(abs(tmp)-BOX_SIZE,0.0)) * (1.0 - abs(sign(x)));
+        thisObstacle.id += 5 * int(x == 0.0);
+
+        // For torus (obstacle ID 1, material 5)
+        vec2 q = vec2(length(tmp.xy)-TORUS_SIZE.x,tmp.z);
+        thisObstacle.dist += (length(q)-TORUS_SIZE.y) * (1.0 - abs(sign(x - 1.0)));
+        thisObstacle.id += 5 * int(x == 1.0);
+
+        // Note that, if an obstacle has an invalid
+        // ID, it'll cause the distance to be 0.
+        // There isn't a conditional here to check for that,
+        // since conditionals are expensive in GLSL.
+
+        // if (thisObstacle.dist == 0.0) thisObstacle.dist = FAR_DIST;
+
+		obstacleHit = min(obstacleHit, thisObstacle);
+	}
+
+    return obstacleHit;
+}
+
 // Distance function for the scene
 HitPoint scene(vec3 p) {
+    // player floats up and down
+    float vertDisp = sin(time*2.0)*0.2;
+
     // player (material 0)
 	// We subtract an extra vector
 	// from p to translate the player
 	// up and down, to give it the
 	// appearance of floating.
-    HitPoint playerHit  = HitPoint(player(invPlayerRot*(p - playerPos - vec3(0,sin(time*2.0)*0.2,0))),0);
+    HitPoint playerHit  = HitPoint(player(invPlayerRot*(p - playerPos - vec3(0,vertDisp,0))),0);
     // walls (material 1 or 3)
     float wallDist = min(5.5-p.x, 5.5+p.x);
 	wallDist += sin(10.0*p.y)*0.1;
@@ -168,8 +218,9 @@ HitPoint scene(vec3 p) {
     mp.xz = mod(p.xz,vec2(8.0,8.0))-vec2(4.0,4.0);
     mp.y += 2.0; // overlap floor
 	// this is guaranteed not to
-	// cause an overlap, because
-	// of the maximum derivative of sin.
+	// cause an overestimation of
+    // distance, because of the
+	// maximum derivative of sin.
 	mp.y += sin(time*2.0+p.z*0.3);
     // creates spheres
     float ornamentDist = length(mp)-0.5;
@@ -180,43 +231,19 @@ HitPoint scene(vec3 p) {
     // we do this using the 'smooth min' function.
     floorHit.dist = smin(floorHit.dist, ornamentDist, 0.4);
 
+    // Projectile (material 4)
+    // Obviously we only draw this if the projectile exists.
+    HitPoint projectileHit = HitPoint(length(p - playerPos - vec3(0,vertDisp,-2.4))-0.3, 4);
+    if (projectileExists) projectileHit.dist = length(p-projectilePos)-0.3;
 
-	// Obstacles (materials 4+)
-	HitPoint obstacleHit = HitPoint(FAR_DIST,0);
+    // If the projectile doesn't exist, we can indicate this by
+    // drawing it onto the player, to indicate they can shoot it.
 
-	for (int i = 0; i < MAX_NUM_OBSTACLES; ++i) {
-		if (i == numObstacles) break;
-		vec3 tmp = obstacleInvRotation[i]*(p - obstaclePos[i]);
-		HitPoint thisObstacle = HitPoint(0.0,0);
+    // obstacles
+    HitPoint obstacleHit = sceneObstacles(p);
 
-        // In GLSL, conditionals are generally slow,
-        // so we try to not use them. Instead, we multiply
-        // by booleans.
-
-		float x = float(obstacleType[i]);
-
-		// http://iquilezles.org/www/articles/distfunctions/distfunctions.htm
-
-        // just an ordinary box (obstacle ID 0, material 4)
-        thisObstacle.dist += length(max(abs(tmp)-BOX_SIZE,0.0)) * (1.0 - abs(sign(x)));
-        thisObstacle.id += 4 * int(x == 0.0);
-
-        // For torus (obstacle ID 1, material 5)
-        vec2 q = vec2(length(tmp.xy)-TORUS_SIZE.x,tmp.z);
-        thisObstacle.dist += (length(q)-TORUS_SIZE.y) * (1.0 - abs(sign(x - 1.0)));
-        thisObstacle.id += 5 * int(x == 1.0);
-
-        // Note that, if an obstacle has an invalid
-        // ID, it'll cause the distance to be 0.
-        // There isn't a conditional here to check for that,
-        // since conditionals are expensive in GLSL.
-
-        // if (thisObstacle.dist == 0.0) thisObstacle.dist = FAR_DIST;
-
-		obstacleHit = min(obstacleHit, thisObstacle);
-	}
-
-    return min(playerHit,min(wallHit,min(floorHit, obstacleHit)));
+    // return the closest distance of all
+    return min(playerHit,min(wallHit,min(floorHit,min(projectileHit,obstacleHit))));
 }
 
 // Estimate normal at a point
@@ -404,7 +431,7 @@ vec3 lighting(vec3 ambient_col, vec3 diffuse_col, vec3 specular_col,
             // point which we originally intersected,
             // to prevent artefacts when the normal is
             // almost perpendicular to the light.
-			tmp *= shadow(p + relDir*EPSILON*2.0, relDir, EPSILON*2.0, dist, 8.0);
+			tmp *= shadow(p + normal*EPSILON*2.0, relDir, EPSILON*2.0, dist, 8.0);
 		}
 
 		colour += tmp;

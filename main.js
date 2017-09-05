@@ -85,14 +85,18 @@ var obstaclePosUniform;
 var obstacleInvRotationUniform;
 var obstacleTypeUniform;
 
+var projectilePosUniform;
+var projectileExistsUniform;
+
 var MAX_NUM_LIGHTS = 32;
 var MAX_NUM_DIRECTIONAL_LIGHTS = 32;
 var MAX_NUM_MATERIALS = 32;
 var MAX_NUM_OBSTACLES = 32;
 
 var lights = [
-    new Light([0,3,1],[1,1,1],1.5,40.0),
-    new Light([0,4,-60],[0.8,0.8,1],1.0,50.0)
+    new Light([0,3,-1],[1,1,1],1.5,40.0), // player light
+    new Light([0,4,-60],[0.8,0.8,1],1.0,50.0), // forwards light
+    new Light([0,0,0],[1,1,1],0.0,40.0) // projectile light
 ];
 var directionalLights = [];
 var materials = [
@@ -100,7 +104,8 @@ var materials = [
     new Material([0.35,0.25,0.7],[0.7,0.7,0.7],2.0), // wall
     new Material([0.2,0.2,0.3],[1,1,1],4.0), // floor
 	new Material([0.4,0.4,0.4],[1,1,1],2.0), // for checker pattern
-	new Material([0.3,0.6,0.4],[1,1,1],8.0), // obstacle 0
+    new Material([0.5,0.5,0.7],[1,1,1],8.0), // projectile
+	new Material([0.3,0.6,0.4],[0.5,0.7,0.4],8.0), // obstacles from this point
 	new Material([0.7,0.3,0.5],[1,1,1],8.0)
 ];
 var obstacles = [
@@ -139,10 +144,22 @@ var movementSpeed = 1.0;
 var relativeProjectileSpeed = 1.0;
 var projectilePos = null;
 var projectileExists = false;
+var originalProjectileSpeed = 0.0;
 
 // whether the arrow keys are pressed
 var leftPressed = false;
 var rightPressed = false;
+
+function shootProjectile() {
+    projectileExists = true;
+    projectilePos = playerPos.slice(); // copy player position
+    projectilePos[2] -= 2.4; // move in front of player
+
+    originalProjectileSpeed = playerSpeed;
+
+    // the actual movement is done in the
+    // main render loop.
+}
 
 // handlers for buttons
 function keyDownHandler(e) {
@@ -150,7 +167,12 @@ function keyDownHandler(e) {
 		leftPressed = true;
 	} else if (e.keyCode == 39) {
 		rightPressed = true;
-	}
+	} else if (e.keyCode == 32) {
+        // spacebar - shoot projectile
+        if (!projectileExists) {
+            shootProjectile();
+        }
+    }
 }
 
 function keyUpHandler(e) {
@@ -465,6 +487,9 @@ function setupWebGLState() {
 	obstaclePosUniform = gl.getUniformLocation(program, "obstaclePos");
 	obstacleInvRotationUniform = gl.getUniformLocation(program, "obstacleInvRotation");
 	obstacleTypeUniform = gl.getUniformLocation(program, "obstacleType");
+
+    projectileExistsUniform = gl.getUniformLocation(program, "projectileExists");
+    projectilePosUniform = gl.getUniformLocation(program, "projectilePos");
 }
 
 
@@ -482,53 +507,7 @@ function render(time) {
         return;
     }
     
-    // Background colour: black
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
-    // Clear the canvas.
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    
-    // Tell WebGL to use our shader program.
-    gl.useProgram(program);
-    
-    
-    // Set the uniforms
-    gl.uniform2f(screenSizeUniform, canvas.width, canvas.height);
-    gl.uniform3fv(cameraPosUniform, new Float32Array(cameraPos));
-    gl.uniform3fv(playerPosUniform, new Float32Array(playerPos));
-    // divide by 1000: ms -> s
-    gl.uniform1f(timeUniform,currentTime/1000.0);
-    setLightUniforms(lights);
-    setDirectionalLightUniforms(directionalLights);
-    setMaterialUniforms(materials);
-	setObstacleUniforms(obstacles);
-    
-    // We calculate the rotation matrix for player rotation.
-    // First calculate the transformation matrix.
-    var pm = rotateZ(playerRotation);
-
-    // We should transpose it here to
-    // ensure the data is in the correct
-    // format for WebGL to use.
-    // However, then in the fragment shader
-    // we would have to find the inverse
-    // of the matrix. The inverse is just
-    // the matrix's transpose, so we do
-    // two transpositions, which is the same
-    // as doing nothing.
-
-    // Set uniform
-    gl.uniformMatrix3fv(invPlayerRotationUniform, false, new Float32Array(pm));
-
-    // We need to calculate the rotation matrix from
-    // view to world.
-    // First get the transformation matrix.
-    var m = mult3(mult3(rotateY(angle[0]), rotateX(angle[1])), rotateZ(angle[2]));
-    // We transpose the matrix to make WebGL happy.
-    m = trans3(m);
-    // Now set the uniform.
-    gl.uniformMatrix3fv(viewToWorldUniform, false, new Float32Array(m));
-
-
+    // Update the scene
     var isMovingRight = (rightPressed && !leftPressed);
     var isMovingLeft  = (leftPressed && !rightPressed);
 
@@ -571,6 +550,9 @@ function render(time) {
         }
     }
 
+    // Speed up
+	playerSpeed += deltaTime*0.000005;
+
 	// The player rotation and movement
 	// are linked, to make movement smooth.
 	// In particular, the player moves
@@ -583,11 +565,8 @@ function render(time) {
     // Move player forwards
     playerPos[2] -= deltaTime*playerSpeed*0.02;
 
-	// Speed up
-	playerSpeed += deltaTime*0.000005;
-
 	// Rotate wall colour
-	materials[1].diffuse = rotateHue(materials[1].diffuse, deltaTime*0.01);
+	materials[1].diffuse = rotateHue([0.35,0.25,0.7], currentTime*0.01);
 
     // Move the 'player light' to near the player
     // We scale down the player position to prevent
@@ -595,16 +574,97 @@ function render(time) {
     // which would cause artifacts.
     lights[0].pos[0] = playerPos[0]*0.8;
     lights[0].pos[1] = playerPos[1] + 3.0;
-    lights[0].pos[2] = playerPos[2] + 1.0;
+    lights[0].pos[2] = playerPos[2];
 
     // Also another light
     lights[1].pos[0] = 0.0;
     lights[1].pos[1] = playerPos[1] + 4.0;
     lights[1].pos[2] = playerPos[2] - 60.0;
 
+    // Also projectile light
+    if (projectileExists) {
+        // Set colour to rotating wall colour
+        lights[2].colour = materials[1].diffuse;
+
+        lights[2].pos[0] = projectilePos[0]*0.8;
+        lights[2].pos[1] = projectilePos[1] + 3.0;
+        lights[2].pos[2] = projectilePos[2];
+        lights[2].intensity = 2.0;
+    } else {
+        lights[2].intensity = 0.0;
+    }
+
     // Move camera to player
     cameraPos[1] = playerPos[1] + 4.5;
     cameraPos[2] = playerPos[2] + 20.0;
+
+    // Move the projectile (if it exists, of course.)
+    if (projectileExists) {
+        projectilePos[2] -= deltaTime*(originalProjectileSpeed*0.01+relativeProjectileSpeed*0.08);
+    }
+
+    if (projectileExists && (projectilePos[2] - cameraPos[2]) < -288.0) {
+        // The projectile is out of view.
+        // So it's reshootable.
+        projectileExists = false;
+    }
+
+
+    // The following code is mainly to do with
+    // the actual rendering.
+
+    // Background colour: black
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    // Clear the canvas.
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    // Tell WebGL to use our shader program.
+    gl.useProgram(program);
+
+
+    // Set the uniforms
+    gl.uniform2f(screenSizeUniform, canvas.width, canvas.height);
+    gl.uniform3fv(cameraPosUniform, new Float32Array(cameraPos));
+    gl.uniform3fv(playerPosUniform, new Float32Array(playerPos));
+    // divide by 1000: ms -> s
+    gl.uniform1f(timeUniform,currentTime/1000.0);
+    setLightUniforms(lights);
+    setDirectionalLightUniforms(directionalLights);
+    setMaterialUniforms(materials);
+	setObstacleUniforms(obstacles);
+
+    // Projectile uniform
+    gl.uniform1f(projectileExistsUniform, projectileExists);
+    if (projectileExists) {
+        // We want to send the data to be drawn.
+        gl.uniform3fv(projectilePosUniform, new Float32Array(projectilePos));
+    }
+
+    // We calculate the rotation matrix for player rotation.
+    // First calculate the transformation matrix.
+    var pm = rotateZ(playerRotation);
+
+    // We should transpose it here to
+    // ensure the data is in the correct
+    // format for WebGL to use.
+    // However, then in the fragment shader
+    // we would have to find the inverse
+    // of the matrix. The inverse is just
+    // the matrix's transpose, so we do
+    // two transpositions, which is the same
+    // as doing nothing.
+
+    // Set uniform
+    gl.uniformMatrix3fv(invPlayerRotationUniform, false, new Float32Array(pm));
+
+    // We need to calculate the rotation matrix from
+    // view to world.
+    // First get the transformation matrix.
+    var m = mult3(mult3(rotateY(angle[0]), rotateX(angle[1])), rotateZ(angle[2]));
+    // We transpose the matrix to make WebGL happy.
+    m = trans3(m);
+    // Now set the uniform.
+    gl.uniformMatrix3fv(viewToWorldUniform, false, new Float32Array(m));
 
 	// Execute the shader programs
     // The gl.TRIANGLES indicates to draw triangles;
@@ -613,8 +673,7 @@ function render(time) {
 	// the drawn version is as up-to-date
 	// as possible.
     gl.drawArrays(gl.TRIANGLES, 0, 6);
-
-    // ensure drawing is done
+    // Wait for drawing to finish
     gl.finish();
 
     // setup the browser for the
