@@ -88,6 +88,19 @@ var obstacleTypeUniform;
 var projectilePosUniform;
 var projectileExistsUniform;
 
+// for collision detection.
+// the GPU does this for us.
+// we do this so that we don't have to care about
+// the actual shape of the obstacles in the
+// main code.
+// this allows us to interface with it.
+var isCollisionDetectionUniform;
+
+var collisionTextureWidth = 1;
+var collisionTextureHeight = 1;
+var collisionTexture;
+var collisionFramebuffer;
+
 var MAX_NUM_LIGHTS = 32;
 var MAX_NUM_DIRECTIONAL_LIGHTS = 32;
 var MAX_NUM_MATERIALS = 32;
@@ -457,6 +470,34 @@ function setupWebGLState() {
     // 3.  the type of the data
     gl.vertexAttribPointer(positionAttribLoc, 2, gl.FLOAT, false, 0, 0);
 
+	// Create the texture for collision detection
+	// red component is player collision,
+	// green component is projectile collision
+	// https://webglfundamentals.org/webgl/lessons/webgl-render-to-texture.html
+	collisionTexture = gl.createTexture();
+	gl.bindTexture(gl.TEXTURE_2D, collisionTexture);
+
+	var level = 0;
+	var internalFormat = gl.RGBA;
+	var border = 0;
+	var format = gl.RGBA;
+	var type = gl.UNSIGNED_BYTE;
+	var data = null;
+	gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, collisionTextureWidth, collisionTextureHeight, border, format, type, data);
+
+	// change filtering so mip-maps
+	// are not needed
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+	// create / bind framebuffer
+	collisionFramebuffer = gl.createFramebuffer();
+	gl.bindFramebuffer(gl.FRAMEBUFFER, collisionFramebuffer);
+
+	// attach texture
+	gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, collisionTexture, level);
+
 
     // We also get the uniform locations,
     // to pass data to/from the shader.
@@ -490,6 +531,8 @@ function setupWebGLState() {
 
     projectileExistsUniform = gl.getUniformLocation(program, "projectileExists");
     projectilePosUniform = gl.getUniformLocation(program, "projectilePos");
+
+	isCollisionDetectionUniform = gl.getUniformLocation(program, "isCollisionDetection");
 }
 
 
@@ -609,20 +652,10 @@ function render(time) {
         projectileExists = false;
     }
 
-
-    // The following code is mainly to do with
-    // the actual rendering.
-
-    // Background colour: black
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
-    // Clear the canvas.
-    gl.clear(gl.COLOR_BUFFER_BIT);
-
-    // Tell WebGL to use our shader program.
+	// Tell WebGL to use our shader program.
     gl.useProgram(program);
 
-
-    // Set the uniforms
+	// Set the uniforms
     gl.uniform2f(screenSizeUniform, canvas.width, canvas.height);
     gl.uniform3fv(cameraPosUniform, new Float32Array(cameraPos));
     gl.uniform3fv(playerPosUniform, new Float32Array(playerPos));
@@ -640,7 +673,7 @@ function render(time) {
         gl.uniform3fv(projectilePosUniform, new Float32Array(projectilePos));
     }
 
-    // We calculate the rotation matrix for player rotation.
+	// We calculate the rotation matrix for player rotation.
     // First calculate the transformation matrix.
     var pm = rotateZ(playerRotation);
 
@@ -666,6 +699,25 @@ function render(time) {
     // Now set the uniform.
     gl.uniformMatrix3fv(viewToWorldUniform, false, new Float32Array(m));
 
+
+
+	// Render to the collision texture.
+	// The fragment shader writes to the
+	// red and green components of the
+	// pixel at (0,0), indicating
+	// which obstacle the player and the
+	// projectile have collided with respectively.
+	// (The ID is divided by 255.)
+	// 1.0 indicates no collision.
+	gl.bindFramebuffer(gl.FRAMEBUFFER, collisionFramebuffer);
+
+	// Background colour: all zeroes
+    gl.clearColor(0.0, 0.0, 0.0, 0.0);
+    // Clear the texture.
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+	gl.uniform1f(isCollisionDetectionUniform, true);
+
 	// Execute the shader programs
     // The gl.TRIANGLES indicates to draw triangles;
     // the 6 indicates there are 6 vertices.
@@ -674,6 +726,24 @@ function render(time) {
 	// as possible.
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     // Wait for drawing to finish
+    gl.finish();
+
+	// Use collision information
+	var collisionData = new Uint8Array(4);
+	gl.readPixels(0,0,1,1,gl.RGBA,gl.UNSIGNED_BYTE, collisionData);
+
+    // The following code is for actual rendering
+	// to the canvas.
+
+	// bind canvas as framebuffer
+	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+	gl.uniform1f(isCollisionDetectionUniform, false);
+
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.finish();
 
     // setup the browser for the
