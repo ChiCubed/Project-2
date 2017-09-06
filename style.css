@@ -9,15 +9,11 @@
     width: 100%;
 }
 
-#pause {
-    /* Absolute position over the canvas. */
-    position: absolute;
-    right: 15px;
-    top: 15px;
+button {
     padding: 15px;
     font-size: 30px;
     border: 2px solid black;
-    background-color: rgba(255, 255, 255, 0.4);
+    background-color: rgba(255, 255, 255, 0.6);
     /* prevent selection */
     -webkit-user-select: none;
     -moz-user-select: none;
@@ -26,12 +22,89 @@
     user-select: none;
 }
 
-#pause:hover {
-    background-color: rgba(255, 255, 255, 0.8);
+button:hover {
+    background-color: rgba(255, 255, 255, 0.9);
     cursor: pointer;
 }
 
-#pause:focus {
+button:focus {
     /* remove outline */
     outline: none;
+}
+
+#pauseMenu {
+    text-align: center;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0px;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+#pause {
+    position: absolute;
+    right: 15px;
+    top: 15px;
+}
+
+#resume {
+    margin: 200px auto auto auto;
+}
+
+#gameOverMenu {
+    text-align: center;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0px;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+#winMenu {
+    text-align: center;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0px;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+#loseText {
+    width: 100%;
+    margin-top: 100px;
+
+    text-align: center;
+    font-family: Helvetica;
+    font-size: 64px;
+    color: red;
+    text-shadow: 0 0 8px black;
+
+    /* prevent selection */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    -o-user-select: none;
+    user-select: none;
+}
+
+#winText {
+    width: 100%;
+    margin-top: 100px;
+
+    text-align: center;
+    font-family: Helvetica;
+    font-size: 64px;
+    color: green;
+    text-shadow: 0 0 8px black;
+
+    /* prevent selection */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    -o-user-select: none;
+    user-select: none;
+}
+
+.selectLevel {
+    margin-top: 30px;
 }

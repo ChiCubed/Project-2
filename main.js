@@ -3,6 +3,7 @@
 // by Mozilla Contributors, licensed under CC-BY-SA 2.5.
 
 var canvas; // The canvas element.
+var container; // Container for canvas + pause button.
 var gl; // The WebGL context.
 var verticesBuffer; // Vertex Buffer Object.
 var program = null; // WebGL shader program.
@@ -88,6 +89,8 @@ var obstacleTypeUniform;
 var projectilePosUniform;
 var projectileExistsUniform;
 
+var winPositionUniform;
+
 // for collision detection.
 // the GPU does this for us.
 // we do this so that we don't have to care about
@@ -109,7 +112,9 @@ var MAX_NUM_OBSTACLES = 32;
 var lights = [
     new Light([0,3,-1],[1,1,1],1.5,40.0), // player light
     new Light([0,4,-60],[0.8,0.8,1],1.0,50.0), // forwards light
-    new Light([0,0,0],[1,1,1],0.0,40.0) // projectile light
+    new Light([0,4,-30],[0.6,0.6,0.6],1.0,40.0), // secondary forwards light
+    new Light([0,0,0],[1,1,1],0.0,40.0), // projectile light
+    new Light([0,0,0],[1,1,1],1.5,50.0) // win position light
 ];
 var directionalLights = [];
 var materials = [
@@ -118,13 +123,16 @@ var materials = [
     new Material([0.2,0.2,0.3],[1,1,1],4.0), // floor
 	new Material([0.4,0.4,0.4],[1,1,1],2.0), // for checker pattern
     new Material([0.5,0.5,0.7],[1,1,1],8.0), // projectile
+    new Material([0.6,0.4,0.3],[1,1,1],4.0), // win plane
 	new Material([0.3,0.6,0.4],[0.5,0.7,0.4],8.0), // obstacles from this point
 	new Material([0.7,0.3,0.5],[1,1,1],8.0)
 ];
 var obstacles = [
 	new Obstacle([0,0,-100],0.0,0),
-	new Obstacle([0,0,-200],0.0,1)
+	new Obstacle([0,0,-200],0.0,1),
+    new Obstacle([0,0,-300],0.0,2)
 ];
+var winPosition = -500.0;
 
 
 // For FPS calculation
@@ -162,6 +170,28 @@ var originalProjectileSpeed = 0.0;
 // whether the arrow keys are pressed
 var leftPressed = false;
 var rightPressed = false;
+
+// Other UI elements
+var gameOverMenu;
+var winMenu;
+var pauseButton;
+var pauseMenu;
+
+// for shaking the canvas
+var shakeFramesLeft;
+var shakeMagnitude;
+var shakeMagnitudeDelta;
+
+
+// whether the game is actually playing or not
+var gamePlaying = false;
+var paused = false;
+var pauseTime;
+
+
+function random(min, max) {
+    return min + Math.floor(Math.random()*(max-min+1));
+}
 
 function shootProjectile() {
     projectileExists = true;
@@ -533,6 +563,155 @@ function setupWebGLState() {
     projectilePosUniform = gl.getUniformLocation(program, "projectilePos");
 
 	isCollisionDetectionUniform = gl.getUniformLocation(program, "isCollisionDetection");
+
+    winPositionUniform = gl.getUniformLocation(program, "winPosition");
+}
+
+
+// Loosely based off https://jsfiddle.net/12aueufy/1/
+function shakeCanvas(time) {
+    // Restore original element translation at the start.
+    container.style.transform = 'translate(0px, 0px)';
+
+    if (shakeFramesLeft <= 0) {
+        // We're finished.
+        return;
+    }
+
+    shakeMagnitude += shakeMagnitudeDelta;
+
+    var randX = random(-shakeMagnitude, shakeMagnitude);
+    var randY = random(-shakeMagnitude, shakeMagnitude);
+
+    // Javascript will automatically make randX and randY
+    // strings for us.
+    container.style.transform = 'translate(' + randX + 'px, ' + randY + 'px)';
+
+    shakeFramesLeft--;
+    requestAnimationFrame(shakeCanvas);
+}
+
+
+function loseGame() {
+    // We want to stop the game execution
+    cancelAnimationFrame(requestId);
+
+    // Make canvas shake
+    shakeFramesLeft = 15;
+    shakeMagnitude = 30;
+    shakeMagnitudeDelta = -2;
+    requestAnimationFrame(shakeCanvas);
+
+    gamePlaying = false;
+    paused = false;
+
+    // draw menu
+    // i.e. make it not invisible
+    gameOverMenu.style.display = '';
+
+    // hide pause button
+    pauseButton.style.display = 'none';
+    pauseMenu.style.display = 'none';
+}
+
+
+function winGame() {
+    // Stop game execution
+    cancelAnimationFrame(requestId);
+
+    // Make canvas shake
+    shakeFramesLeft = 15;
+    shakeMagnitude = 30;
+    shakeMagnitudeDelta = -2;
+    requestAnimationFrame(shakeCanvas);
+
+    gamePlaying = false;
+    paused = false;
+
+    winMenu.style.display = '';
+
+    pauseButton.style.display = 'none';
+    pauseMenu.style.display = 'none';
+}
+
+
+function startGame() {
+    // Starts game.
+    // If already playing (but is paused),
+    // resumes.
+    if (!gamePlaying) {
+        startTime = performance.now();
+        lastFrameTime = startTime;
+
+        playerPos = [0.0, 0.0, 0.0];
+        playerSpeed = 1.0;
+
+        gamePlaying = true;
+        paused = false;
+
+        // show pause button, hide pause menu
+        pauseButton.style.display = '';
+        pauseMenu.style.display = 'none';
+
+        // make menus invisible
+        gameOverMenu.style.display = 'none';
+        winMenu.style.display = 'none';
+
+        // reset container position
+        container.style.transform = 'translate(0px, 0px)';
+
+        requestId = requestAnimationFrame(render, canvas);
+    } else if (paused) {
+        // We just resume the render loop.
+        // First, account for the time that the
+        // game has spent not running.
+        var deltaTime = performance.now() - pauseTime;
+        startTime += deltaTime;
+        lastFrameTime += deltaTime;
+
+        // don't reset game state
+
+        gamePlaying = true;
+        paused = false;
+
+        // show pause button, hide pause menu
+        pauseButton.style.display = '';
+        pauseMenu.style.display = 'none';
+
+        // ensure game over menu is invisible
+        gameOverMenu.style.display = 'none';
+        winMenu.style.display = 'none';
+
+        container.style.transform = 'translate(0px, 0px)';
+
+        requestId = requestAnimationFrame(render, canvas);
+    }
+}
+
+
+function pauseGame() {
+    if (!gamePlaying || paused) {
+        // We're not actually in-game
+        // or the game is already paused.
+        return;
+    }
+    // stop rendering
+    cancelAnimationFrame(requestId);
+
+    pauseTime = performance.now();
+    paused = true;
+
+    pauseButton.style.display = 'none';
+    pauseMenu.style.display = '';
+}
+
+
+function handleVisibilityChange() {
+    if (document.hidden) {
+        // we just left the tab.
+        // pause
+        pauseGame();
+    }
 }
 
 
@@ -541,15 +720,25 @@ function setupWebGLState() {
 // the scene, and does most of
 // the game logic.
 function render(time) {
-	var deltaTime = time - lastFrameTime;
-	var currentTime = time - startTime;
-    
-	// sanity check
+    // sanity check
     if (program === null) {
         // The program hasn't loaded yet! :O
         return;
     }
     
+
+    // setup the browser for the
+	// next frame
+    requestId = requestAnimationFrame(render, canvas);
+
+    // check if player has won level
+    if (playerPos[2] <= winPosition) {
+        winGame();
+    }
+
+	var deltaTime = time - lastFrameTime;
+	var currentTime = time - startTime;
+
     // Update the scene
     var isMovingRight = (rightPressed && !leftPressed);
     var isMovingLeft  = (leftPressed && !rightPressed);
@@ -616,26 +805,45 @@ function render(time) {
     // the light from getting close to a wall,
     // which would cause artifacts.
     lights[0].pos[0] = playerPos[0]*0.8;
-    lights[0].pos[1] = playerPos[1] + 3.0;
+    lights[0].pos[1] = playerPos[1] + 4.0;
     lights[0].pos[2] = playerPos[2];
+
+    // Prevent it from going past the win location
+    lights[0].pos[2] = Math.max(lights[0].pos[2], winPosition + 5);
 
     // Also another light
     lights[1].pos[0] = 0.0;
-    lights[1].pos[1] = playerPos[1] + 4.0;
+    lights[1].pos[1] = playerPos[1] + 5.0;
     lights[1].pos[2] = playerPos[2] - 60.0;
+
+    // Also prevent it from going past the win position
+    lights[1].pos[2] = Math.max(lights[1].pos[2], winPosition + 5);
+
+    // Also the secondary forwards light
+    lights[2].pos[0] = 0.0;
+    lights[2].pos[1] = playerPos[1] + 5.0;
+    lights[2].pos[2] = playerPos[2] - 30.0;
+
+    // Also prevent it from going past the win position
+    lights[2].pos[2] = Math.max(lights[2].pos[2], winPosition + 5);
 
     // Also projectile light
     if (projectileExists) {
         // Set colour to rotating wall colour
-        lights[2].colour = materials[1].diffuse;
+        lights[3].colour = materials[1].diffuse;
 
-        lights[2].pos[0] = projectilePos[0]*0.8;
-        lights[2].pos[1] = projectilePos[1] + 3.0;
-        lights[2].pos[2] = projectilePos[2];
-        lights[2].intensity = 2.0;
+        lights[3].pos[0] = projectilePos[0]*0.8;
+        lights[3].pos[1] = projectilePos[1] + 3.0;
+        lights[3].pos[2] = projectilePos[2];
+        lights[3].intensity = 2.0;
     } else {
-        lights[2].intensity = 0.0;
+        lights[3].intensity = 0.0;
     }
+
+    // Also, ending / win position light
+    lights[4].pos[0] = 0.0;
+    lights[4].pos[1] = 2.0;
+    lights[4].pos[2] = winPosition + 5.0;
 
     // Move camera to player
     cameraPos[1] = playerPos[1] + 4.5;
@@ -646,7 +854,9 @@ function render(time) {
         projectilePos[2] -= deltaTime*(originalProjectileSpeed*0.01+relativeProjectileSpeed*0.08);
     }
 
-    if (projectileExists && (projectilePos[2] - cameraPos[2]) < -288.0) {
+    if (projectileExists &&
+        ((projectilePos[2] - cameraPos[2]) < -288.0 ||
+          projectilePos[2] - winPosition < 10.0)) {
         // The projectile is out of view.
         // So it's reshootable.
         projectileExists = false;
@@ -701,6 +911,12 @@ function render(time) {
 
 
 
+    // Write the win position.
+    // Not strictly necessary to do every frame.
+    gl.uniform1f(winPositionUniform, winPosition);
+
+
+
 	// Render to the collision texture.
 	// The fragment shader writes to the
 	// red and green components of the
@@ -732,6 +948,34 @@ function render(time) {
 	var collisionData = new Uint8Array(4);
 	gl.readPixels(0,0,1,1,gl.RGBA,gl.UNSIGNED_BYTE, collisionData);
 
+    var obstacleToRemove = null;
+
+    if (collisionData[1] != 255) {
+        // Destroy projectile
+        projectileExists = false;
+
+        // Get rid of the collided obstacle
+        obstacleToRemove = collisionData[1];
+    }
+
+    if (collisionData[0] != 255) {
+        // Player collision: you lose!
+        if (collisionData[0] != obstacleToRemove) {
+            loseGame();
+        }
+    }
+
+    // Remove the obstacle
+    if (obstacleToRemove !== null) {
+        obstacles.splice(obstacleToRemove, 1);
+
+        // We'll want to re-send the data about
+        // obstacles as well, so the removed one isn't
+        // rendered.
+        setObstacleUniforms(obstacles);
+    }
+
+
     // The following code is for actual rendering
 	// to the canvas.
 
@@ -746,9 +990,16 @@ function render(time) {
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.finish();
 
-    // setup the browser for the
-	// next frame
-    requestId = requestAnimationFrame(render, canvas);
+    // if the player is close to the win position,
+    // vibrate the canvas.
+    if (playerPos[2] <= winPosition + 50 && playerPos[2] > winPosition) {
+        var mag = (50 - (playerPos[2] - winPosition)) * 0.6;
+        var randX = random(-mag, mag);
+        // we want the random Y movement to be less
+        var randY = random(-mag * 0.2, mag * 0.2);
+
+        container.style.transform = 'translate(' + randX + 'px, ' + randY + 'px)';
+    }
 
     // Now we do FPS calculation.
     var fps = 1000/deltaTime;
@@ -767,6 +1018,11 @@ function handleContextLost(event) {
 
 function initGame() {
     canvas = document.getElementById('canvas');
+    container = document.getElementById('container');
+    gameOverMenu = document.getElementById('gameOverMenu');
+    winMenu = document.getElementById('winMenu');
+    pauseButton = document.getElementById('pause');
+    pauseMenu = document.getElementById('pauseMenu');
     fpsElement = document.getElementById('fps');
     
     gl = initWebGL(canvas);
@@ -829,11 +1085,12 @@ function initGame() {
 			// for the movement buttons
 			document.addEventListener("keydown", keyDownHandler, false);
 			document.addEventListener("keyup", keyUpHandler, false);
+            // Add event listener for tab change
+            // (pause)
+            document.addEventListener("visibilitychange", handleVisibilityChange, false);
 
 			// Now we start the render loop
-			startTime = performance.now();
-    		lastFrameTime = startTime;
-    		requestId = requestAnimationFrame(render, canvas);
+			startGame();
         };
         fragReq.open("GET", "fragment-shader.glsl");
         fragReq.responseType = "text";

@@ -27,8 +27,14 @@ const float NORMAL_EPSILON = 0.01;
 const float stepScale = 0.90;
 
 // For lighting of materials.
-vec3 AMBIENT_COLOUR = vec3(0.1,0.1,0.1);
+vec3 AMBIENT_COLOUR = vec3(0.0);
 float ambientIntensity = 1.0;
+
+// player size
+const vec3 pA = vec3(-1,  0, 0.3),
+           pB = vec3( 0,0.1,   0),
+           pC = vec3( 0,  0,  -2),
+           pD = vec3( 1,  0, 0.3);
 
 
 // To pass light data in/out of the shader
@@ -73,6 +79,7 @@ uniform bool projectileExists;
 // for obstacles
 const vec3 BOX_SIZE = vec3(2.0, 1.0, 2.8);
 const vec3 TORUS_SIZE = vec3(1.8, 0.5, 0.0);
+const vec3 SPHERE_SIZE = vec3(2.0, 0.0, 0.0);
 
 // This determines whether or not
 // the shader is being run for
@@ -82,6 +89,10 @@ const vec3 TORUS_SIZE = vec3(1.8, 0.5, 0.0);
 // projectile.
 
 uniform bool isCollisionDetection;
+
+// This stores the z-position of the
+// win plane.
+uniform float winPosition;
 
 
 struct HitPoint {
@@ -136,14 +147,9 @@ float triangle(vec3 p, vec3 a, vec3 b, vec3 c) {
 
 
 float player(vec3 p) {
-	// player distance
-    const vec3 a = vec3(-1,  0, 0.3),
-               b = vec3( 0,0.1,   0),
-               c = vec3( 0,  0,  -2),
-               d = vec3( 1,  0, 0.3);
     float playerDist = min(
-        triangle(p, a, b, c),
-        triangle(p, b, c, d)
+        triangle(p, pA, pB, pC),
+        triangle(p, pB, pC, pD)
     );
 
 	return playerDist;
@@ -172,23 +178,35 @@ HitPoint sceneObstacles(vec3 p) {
 
         // In GLSL, conditionals are generally slow,
         // so we try to not use them. Instead, we multiply
-        // by booleans.
+        // by booleans cast to floats / ints.
+        // The occurences of (1.0 - abs(sign(x-c))), where c is some number,
+        // indicate that the expression will evaluate to true if and only if
+        // x == c. This of course has a float type and thus is unsuitable
+        // for the integers - there we use int(x == c).
 
 		float x = float(obstacleType[i]);
 
 		// http://iquilezles.org/www/articles/distfunctions/distfunctions.htm
 
-        // just an ordinary box (obstacle ID 0, material 4)
+        // just an ordinary box (obstacle ID 0)
 		// oid of a hitpoint represents the obstacle index
-        thisObstacle.dist += length(max(abs(tmp)-BOX_SIZE,0.0)) * (1.0 - abs(sign(x)));
+        vec3 d = abs(tmp) - BOX_SIZE;
+        thisObstacle.dist += (min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0))) * (1.0 - abs(sign(x)));
 		thisObstacle.oid += i * int(x == 0.0);
-        thisObstacle.mid += 5 * int(x == 0.0);
+        thisObstacle.mid += 6 * int(x == 0.0);
 
-        // For torus (obstacle ID 1, material 5)
+        // For torus (obstacle ID 1)
         vec2 q = vec2(length(tmp.xy)-TORUS_SIZE.x,tmp.z);
         thisObstacle.dist += (length(q)-TORUS_SIZE.y) * (1.0 - abs(sign(x - 1.0)));
 		thisObstacle.oid += i * int(x == 1.0);
-        thisObstacle.mid += 5 * int(x == 1.0);
+        thisObstacle.mid += 6 * int(x == 1.0);
+
+        // For sphere (obstacle ID 2)
+        thisObstacle.dist += (length(tmp)-SPHERE_SIZE.x) * (1.0 - abs(sign(x - 2.0)));
+        thisObstacle.oid += i * int(x == 2.0);
+        thisObstacle.mid += 6 * int(x == 2.0);
+
+
 
         // Note that, if an obstacle has an invalid
         // ID, it'll cause the distance to be 0.
@@ -253,11 +271,21 @@ HitPoint scene(vec3 p) {
     // If the projectile doesn't exist, we can indicate this by
     // drawing it onto the player, to indicate they can shoot it.
 
+    // win position
+    HitPoint winHit = HitPoint(p.z - winPosition, 5, 255);
+    // add some special effects!
+    // two spheres
+    float winOrnamentDist = min(
+        length(vec3(p.x-cos(time)*2.0,p.y-4.0-sin(time)*2.0,p.z-winPosition))-1.0,
+        length(vec3(p.x+cos(time)*2.0,p.y-4.0+sin(time)*2.0,p.z-winPosition))-1.0
+    );
+    winHit.dist = smin(winHit.dist, winOrnamentDist, 0.6);
+
     // obstacles
     HitPoint obstacleHit = sceneObstacles(p);
 
     // return the closest distance of all
-    return min(playerHit,min(wallHit,min(floorHit,min(projectileHit,obstacleHit))));
+    return min(playerHit,min(wallHit,min(floorHit,min(projectileHit,min(winHit,obstacleHit)))));
 }
 
 // Estimate normal at a point
@@ -506,6 +534,25 @@ void main() {
 		if (gl_FragCoord.x < 1.0 && gl_FragCoord.y < 1.0) {
 			gl_FragColor = vec4(1,1,0,0);
 
+            // Distance from player.
+            HitPoint playerHit = min(
+                sceneObstacles(playerPos + pA), min(
+                sceneObstacles(playerPos + pB), min(
+                sceneObstacles(playerPos + pC), min(
+                sceneObstacles(playerPos + pD), min(
+                sceneObstacles(playerPos + (pA+pB)/2.0), min(
+                sceneObstacles(playerPos + (pB+pC)/2.0), min(
+                sceneObstacles(playerPos + (pC+pA)/2.0), min(
+                sceneObstacles(playerPos + (pC+pD)/2.0), min(
+                sceneObstacles(playerPos + (pA+pB+pC)/3.0),
+                sceneObstacles(playerPos + (pB+pC+pD)/3.0)
+            )))))))));
+
+            if (playerHit.dist < 0.0) {
+                // player intersecting an obstacle
+                gl_FragColor.r = float(playerHit.oid) / 255.0;
+            }
+
 			// We calculate distance from
 			// projectile for collision.
 			HitPoint projectileHit = sceneObstacles(projectilePos);
@@ -534,6 +581,7 @@ void main() {
     // so this is a kind of hacky workaround.
     vec3 diffuse, specular;
     float shininess;
+    vec3 fogColour = vec3(0.0, 0.0, 0.0);
     for (int i=0; i<MAX_NUM_MATERIALS; ++i) {
         if (i == result.mid) {
             diffuse = materialDiffuseColour[i];
@@ -547,8 +595,13 @@ void main() {
                                shininess, cameraPos + worldRayDir*result.dist, cameraPos, ambientIntensity,
                                lightPos, lightColour, lightIntensity, reciprocalLightRangeSquared, numLights,
                                directionalLightDirection, directionalLightColour, directionalLightIntensity, numDirectionalLights);
+        // Add fog (so, for example, the win position doesn't suddenly snap into existence)
+        // http://www.iquilezles.org/www/articles/fog/fog.htm
+        // (modified to make fog less harsh)
+        float fogAmount = 1.0 - (clamp(0.0, 1.0, (exp(-result.dist / FAR_DIST) - 0.4)*1.7));
+        colour = mix(colour, fogColour, fogAmount);
         gl_FragColor = vec4(colour,1);
     } else {
-        gl_FragColor = vec4(0.0,0,0,1);
+        gl_FragColor = vec4(fogColour,1);
     }
 }
