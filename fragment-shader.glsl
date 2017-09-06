@@ -77,7 +77,9 @@ const vec3 TORUS_SIZE = vec3(1.5, 0.3, 0.0);
 
 struct HitPoint {
     float dist; // distance to scene
-    int id; // object id
+    int mid; // material id
+	int oid; // obstacle id
+	// oid is only used for obstacles
 };
 
 // Helper functions for HitPoint
@@ -152,12 +154,12 @@ float smin(float a, float b, float k) {
 // (Essentially, this is the obstacles.)
 HitPoint sceneObstacles(vec3 p) {
     // Obstacles (materials 5+)
-	HitPoint obstacleHit = HitPoint(FAR_DIST,0);
+	HitPoint obstacleHit = HitPoint(FAR_DIST,0,-1);
 
 	for (int i = 0; i < MAX_NUM_OBSTACLES; ++i) {
 		if (i == numObstacles) break;
 		vec3 tmp = obstacleInvRotation[i]*(p - obstaclePos[i]);
-		HitPoint thisObstacle = HitPoint(0.0,0);
+		HitPoint thisObstacle = HitPoint(0.0,0,0);
 
         // In GLSL, conditionals are generally slow,
         // so we try to not use them. Instead, we multiply
@@ -169,12 +171,14 @@ HitPoint sceneObstacles(vec3 p) {
 
         // just an ordinary box (obstacle ID 0, material 4)
         thisObstacle.dist += length(max(abs(tmp)-BOX_SIZE,0.0)) * (1.0 - abs(sign(x)));
-        thisObstacle.id += 5 * int(x == 0.0);
+		thisObstacle.oid = 0;
+        thisObstacle.mid += 5 * int(x == 0.0);
 
         // For torus (obstacle ID 1, material 5)
         vec2 q = vec2(length(tmp.xy)-TORUS_SIZE.x,tmp.z);
         thisObstacle.dist += (length(q)-TORUS_SIZE.y) * (1.0 - abs(sign(x - 1.0)));
-        thisObstacle.id += 5 * int(x == 1.0);
+		thisObstacle.oid += int(x == 1.0);
+        thisObstacle.mid += 5 * int(x == 1.0);
 
         // Note that, if an obstacle has an invalid
         // ID, it'll cause the distance to be 0.
@@ -199,18 +203,18 @@ HitPoint scene(vec3 p) {
 	// from p to translate the player
 	// up and down, to give it the
 	// appearance of floating.
-    HitPoint playerHit  = HitPoint(player(invPlayerRot*(p - playerPos - vec3(0,vertDisp,0))),0);
+    HitPoint playerHit  = HitPoint(player(invPlayerRot*(p - playerPos - vec3(0,vertDisp,0))),0,-1);
     // walls (material 1 or 3)
     float wallDist = min(5.5-p.x, 5.5+p.x);
 	wallDist += sin(10.0*p.y)*0.1;
 	wallDist += sin(0.1*p.z)*0.5;
-    HitPoint wallHit    = HitPoint(wallDist,1);
+    HitPoint wallHit    = HitPoint(wallDist,1,-1);
 	if (mod(p.z, 10.0) > 5.0) {
 		// checker pattern
-		wallHit.id = 3;
+		wallHit.mid = 3;
 	}
     // floor (material 2)
-    HitPoint floorHit   = HitPoint(2.0+p.y,2);
+    HitPoint floorHit   = HitPoint(2.0+p.y,2,-1);
 
     // ornaments (also material 2)
     // repeated infinitely
@@ -233,7 +237,7 @@ HitPoint scene(vec3 p) {
 
     // Projectile (material 4)
     // Obviously we only draw this if the projectile exists.
-    HitPoint projectileHit = HitPoint(length(p - playerPos - vec3(0,vertDisp,-2.4))-0.3, 4);
+    HitPoint projectileHit = HitPoint(length(p - playerPos - vec3(0,vertDisp,-2.4))-0.3, 4, -1);
     if (projectileExists) projectileHit.dist = length(p-projectilePos)-0.3;
 
     // If the projectile doesn't exist, we can indicate this by
@@ -266,7 +270,7 @@ HitPoint castRay(vec3 camera, vec3 direction, float near, float far) {
         depth += current.dist * stepScale;
         if (depth >= far) break;
     }
-    return HitPoint(depth, current.id);
+    return HitPoint(depth, current.mid, current.oid);
 }
 
 
@@ -498,12 +502,12 @@ void main() {
     HitPoint result = castRay(cameraPos, worldRayDir, NEAR_DIST, FAR_DIST);
     // Determine diffuse, specular and shininess.
     // GLSL doesn't allow variable array indexing
-    // (e.g. materialDiffuseColour[result.id])
+    // (e.g. materialDiffuseColour[result.mid])
     // so this is a kind of hacky workaround.
     vec3 diffuse, specular;
     float shininess;
     for (int i=0; i<MAX_NUM_MATERIALS; ++i) {
-        if (i == result.id) {
+        if (i == result.mid) {
             diffuse = materialDiffuseColour[i];
             specular = materialSpecularColour[i];
             shininess = materialShininess[i];
