@@ -32,7 +32,7 @@ button:focus {
     outline: none;
 }
 
-#pauseMenu {
+.menu {
     text-align: center;
     position: absolute;
     width: 100%;
@@ -47,36 +47,14 @@ button:focus {
     top: 15px;
 }
 
-#resume {
-    margin: 200px auto auto auto;
-}
-
-#gameOverMenu {
-    text-align: center;
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    top: 0px;
-    background-color: rgba(0, 0, 0, 0.5);
-}
-
-#winMenu {
-    text-align: center;
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    top: 0px;
-    background-color: rgba(0, 0, 0, 0.5);
-}
-
-#loseText {
+.menu h1 {
     width: 100%;
     margin-top: 100px;
 
     text-align: center;
     font-family: Helvetica;
     font-size: 64px;
-    color: red;
+
     text-shadow: 0 0 8px black;
 
     /* prevent selection */
@@ -87,24 +65,53 @@ button:focus {
     user-select: none;
 }
 
-#winText {
-    width: 100%;
-    margin-top: 100px;
-
-    text-align: center;
-    font-family: Helvetica;
-    font-size: 64px;
-    color: green;
-    text-shadow: 0 0 8px black;
-
-    /* prevent selection */
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    -o-user-select: none;
-    user-select: none;
+#levelMenu {
+    /*
+     We use a CSS flexbox to allow us
+     to fit the level selection menu
+     within the canvas.
+    */
+    display: flex;
+    flex-direction: column;
 }
 
-.selectLevel {
+.levelSelectionMenu {
+    /*
+     The reason we use a CSS 'calc'
+     here is that a flexbox, which is
+     what we are using to keep the level
+     button container within the canvas,
+     does not actually take into account
+     margins. Therefore we do it manually.
+    */
+    width: calc(100% - 15px);
+    margin: 15px;
+    flex: 1 1 0%;
+    overflow: auto;
+    overflow-x: hidden;
+}
+
+.levelButton {
+    min-width: 70px;
+    margin: 15px 15px;
+}
+
+#pauseMenu h1 {
+    color: aquamarine;
+}
+
+#gameOverMenu h1 {
+    color: firebrick;
+}
+
+#winMenu h1 {
+    color: lawngreen;
+}
+
+#levelMenu h1 {
+    color: cadetblue;
+}
+
+.selectLevelButton {
     margin-top: 30px;
 }

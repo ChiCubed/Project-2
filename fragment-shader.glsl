@@ -564,7 +564,7 @@ void main() {
 			// projectile for collision.
 			HitPoint projectileHit = sceneObstacles(projectilePos);
 
-			if (projectileHit.dist < 0.3) {
+			if (projectileExists && projectileHit.dist < 0.3) {
 				// intersecting
 				gl_FragColor.g = float(projectileHit.oid) / 255.0;
 			}

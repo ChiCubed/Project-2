@@ -15,21 +15,27 @@
             <canvas id="canvas" width="640px" height="480px"></canvas>
             <!-- Pause button icon -->
             <button id="pause" onclick="pauseGame()">&#9616;&nbsp;&#9612;</button>
-            <div id="pauseMenu" style="display: none">
-                <button id="resume" onclick="startGame()">Resume Game</button>
+            <div id="pauseMenu" class="menu" style="display: none">
+                <h1>Paused</h1>
+                <button id="resume" onclick="startGame()">Resume Game</button><br>
+                <button class="selectLevelButton" onclick="selectLevel()">Return to Level Select</button>
+            </div>
+            <!-- Level select menu -->
+            <div id="levelMenu" class="menu" style="display: none">
+                <h1>Select Level</h1>
             </div>
             <!-- Menu for when the player loses.
                  Hidden by default. -->
-            <div id="gameOverMenu" style="display: none">
-                <h1 id="loseText">You Lose</h1>
+            <div id="gameOverMenu" class="menu" style="display: none">
+                <h1>You Lose</h1>
                 <button class="replay" onclick="startGame()">Replay Level</button><br>
-                <button class="selectLevel" onclick="selectLevel()">Return to Level Select</button>
+                <button class="selectLevelButton" onclick="selectLevel()">Return to Level Select</button>
             </div>
 
-            <div id="winMenu" style="display: none">
-                <h1 id="winText">You Win!</h1>
+            <div id="winMenu" class="menu" style="display: none">
+                <h1>You Win!</h1>
                 <button class="replay" onclick="startGame()">Replay Level</button><br>
-                <button class="selectLevel" onclick="selectLevel()">Return to Level Select</button>
+                <button class="selectLevelButton" onclick="selectLevel()">Return to Level Select</button>
             </div>
         </div>
         <p id="fps"></p>

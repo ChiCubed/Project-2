@@ -64,6 +64,12 @@ function Obstacle(pos, angle, type) {
 	this.type = type;
 }
 
+// Level object.
+function Level(obstacles, winPosition) {
+    this.obstacles = obstacles;
+    this.winPosition = winPosition;
+}
+
 // More binding points
 var numLightsUniform;
 var lightPosUniform;
@@ -129,12 +135,42 @@ var materials = [
 	new Material([0.3,0.6,0.4],[0.5,0.7,0.4],8.0), // obstacles from this point
 	new Material([0.7,0.3,0.5],[1,1,1],8.0)
 ];
-var obstacles = [
-	new Obstacle([0,0,-100],0.0,0),
-	new Obstacle([0,0,-200],0.0,1),
-    new Obstacle([0,0,-300],0.0,2)
+var obstacles = [];
+// currentObstaclePosition stores the
+// index of the next obstacle to add
+// from the level. This allows us to
+// only have to store the obstacles
+// which are currently visible on the
+// screen.
+var currentObstaclePosition;
+// this stores how far the player
+// has to travel before they win.
+var winPosition;
+// current level index
+// in the 'levels' array
+var currentLevel;
+// stores the levels.
+// obstacles in a level should be
+// sorted by their z-position
+// in reverse.
+var levels = [
+    new Level([
+        new Obstacle([0,0,-100],0.0,0),
+        new Obstacle([0,0,-200],0.0,1),
+        new Obstacle([0,0,-300],0.0,2)
+    ], -500.0),
+    new Level([
+        new Obstacle([-1.6,0,-70],0.0,1),
+        new Obstacle([-0.8,0,-80],0.0,1),
+        new Obstacle([ 0.0,0,-90],0.0,1),
+        new Obstacle([ 0.8,0,-100],0.0,1),
+        new Obstacle([ 1.6,0,-110],0.0,1),
+        new Obstacle([ 0.8,0,-120],0.0,1),
+        new Obstacle([ 0.0,0,-130],0.0,1),
+        new Obstacle([-0.8,0,-140],0.0,1),
+        new Obstacle([-1.6,0,-150],0.0,1),
+    ], -170.0)
 ];
-var winPosition = -500.0;
 
 
 // For FPS calculation
@@ -176,6 +212,7 @@ var rightPressed = false;
 // Other UI elements
 var gameOverMenu;
 var winMenu;
+var levelMenu;
 var pauseButton;
 var pauseMenu;
 
@@ -594,15 +631,110 @@ function shakeCanvas(time) {
 }
 
 
+function levelLoader(levelID) {
+    // returns a function which will
+    // load the level levelID.
+    var loadLvl = function() { loadLevel(levelID); };
+    return loadLvl;
+}
+
+
+function addLevelButtons(levelMenuElem) {
+    // This adds buttons to the
+    // element defined by levelMenuElem,
+    // one for each level.
+
+    // Firstly add a side-scrolling element
+    // to hold the levels.
+    var lvlBtnMenu = document.createElement('div');
+    lvlBtnMenu.className = 'levelSelectionMenu';
+
+    for (var i = 0; i < levels.length; ++i) {
+        var btn = document.createElement('button');
+        // automatically converted to string
+        btn.innerHTML = i+1;
+        btn.className = 'levelButton';
+        btn.onclick = levelLoader(i);
+        lvlBtnMenu.appendChild(btn);
+    }
+
+    levelMenuElem.appendChild(lvlBtnMenu);
+}
+
+
+function selectLevel() {
+    // just in case the game is still going
+    // (which it shouldn't be, but this will
+    //  prevent an issue occuring)
+    cancelAnimationFrame(requestId);
+
+    gamePlaying = false;
+    paused = false;
+
+    // draw menu
+    levelMenu.style.display = '';
+
+    // make other menus invisible
+    gameOverMenu.style.display = 'none';
+    winMenu.style.display = 'none';
+    pauseButton.style.display = 'none';
+    pauseMenu.style.display = 'none';
+}
+
+// This function loads a new level.
+// Basically this just sets the currentLevel
+// and starts the game.
+function loadLevel(levelID) {
+    // We don't want to load the level
+    // if we're mid-game!
+    if (gamePlaying) return;
+
+    currentLevel = levelID;
+
+    // start the level
+    startGame();
+}
+
+
+function loadNewObstacles(levelID) {
+    // (Psst. This function also
+    //  deletes old obstacles.)
+
+    var canDeleteOldObstacle = (obstacles.length > 0 && obstacles[0].pos[2] > cameraPos[2] + 32.0);
+
+    // loads new obstacles from the
+    // current level into the
+    // obstacles array.
+    if ((currentObstaclePosition >= levels[levelID].obstacles.length ||
+         levels[levelID].obstacles[currentObstaclePosition].pos[2] < cameraPos[2] - 304.0) &&
+        !canDeleteOldObstacle) {
+        // The next obstacle is out of view (or there aren't any more)
+        // so we won't be adding any new obstacles today.
+        return false;
+    }
+
+    while (currentObstaclePosition < levels[levelID].obstacles.length &&
+           levels[levelID].obstacles[currentObstaclePosition].pos[2] >= cameraPos[2] - 304.0) {
+        // add this obstacle, since it's close enough to in sight
+        // the 'currentObstaclePosition++' means that the below expression is
+        // the same as the following two expressions:
+        // 1. obstacles.push(levels[levelID].obstacles[currentObstaclePosition]);
+        // 2. currentObstaclePosition += 1;
+        console.log('Loaded new obstacle');
+        obstacles.push(levels[levelID].obstacles[currentObstaclePosition++]);
+    }
+
+    while (obstacles.length > 0 && obstacles[0].pos[2] > cameraPos[2] + 32.0) {
+        obstacles.shift(); // removes first element
+    }
+
+    return true;
+}
+
+
 function loseGame() {
     // We want to stop the game execution
     cancelAnimationFrame(requestId);
-
-    // Make canvas shake
-    shakeFramesLeft = 15;
-    shakeMagnitude = 30;
-    shakeMagnitudeDelta = -2;
-    requestAnimationFrame(shakeCanvas);
 
     gamePlaying = false;
     paused = false;
@@ -611,9 +743,18 @@ function loseGame() {
     // i.e. make it not invisible
     gameOverMenu.style.display = '';
 
+    winMenu.style.display = 'none';
+    levelMenu.style.display = 'none';
+
     // hide pause button
     pauseButton.style.display = 'none';
     pauseMenu.style.display = 'none';
+
+    // Make canvas shake
+    shakeFramesLeft = 15;
+    shakeMagnitude = 30;
+    shakeMagnitudeDelta = -2;
+    shakeCanvas();
 }
 
 
@@ -621,19 +762,22 @@ function winGame() {
     // Stop game execution
     cancelAnimationFrame(requestId);
 
-    // Make canvas shake
-    shakeFramesLeft = 15;
-    shakeMagnitude = 30;
-    shakeMagnitudeDelta = -2;
-    requestAnimationFrame(shakeCanvas);
-
     gamePlaying = false;
     paused = false;
 
     winMenu.style.display = '';
 
+    gameOverMenu.style.display = 'none';
+    levelMenu.style.display = 'none';
+
     pauseButton.style.display = 'none';
     pauseMenu.style.display = 'none';
+
+    // Make canvas shake
+    shakeFramesLeft = 15;
+    shakeMagnitude = 30;
+    shakeMagnitudeDelta = -2;
+    shakeCanvas();
 }
 
 
@@ -645,11 +789,15 @@ function startGame() {
         startTime = performance.now();
         lastFrameTime = startTime;
 
-        playerPos = [0.0, 0.0, 0.0];
-        playerSpeed = 1.0;
-
         gamePlaying = true;
         paused = false;
+
+        // reset vars
+        playerPos = [0.0, 0.0, 0.0];
+        playerSpeed = 1.0;
+        obstacles = [];
+        currentObstaclePosition = 0;
+        winPosition = levels[currentLevel].winPosition;
 
         // show pause button, hide pause menu
         pauseButton.style.display = '';
@@ -658,6 +806,7 @@ function startGame() {
         // make menus invisible
         gameOverMenu.style.display = 'none';
         winMenu.style.display = 'none';
+        levelMenu.style.display = 'none';
 
         // reset container position
         container.style.transform = 'translate(0px, 0px)';
@@ -680,9 +829,10 @@ function startGame() {
         pauseButton.style.display = '';
         pauseMenu.style.display = 'none';
 
-        // ensure game over menu is invisible
+        // ensure menus are invisible
         gameOverMenu.style.display = 'none';
         winMenu.style.display = 'none';
+        levelMenu.style.display = 'none';
 
         container.style.transform = 'translate(0px, 0px)';
 
@@ -705,6 +855,11 @@ function pauseGame() {
 
     pauseButton.style.display = 'none';
     pauseMenu.style.display = '';
+
+    // just in case...
+    gameOverMenu.style.display = 'none';
+    winMenu.style.display = 'none';
+    levelMenu.style.display = 'none';
 }
 
 
@@ -771,7 +926,7 @@ function moveLights() {
 function render(time) {
     // sanity check
     if (program === null) {
-        // The program hasn't loaded yet! :O
+        // The program hasn't loaded yet!
         return;
     }
 
@@ -822,8 +977,13 @@ function render(time) {
     gl.uniform2f(screenSizeUniform, canvas.width, canvas.height);
     // divide by 1000: ms -> s
     gl.uniform1f(timeUniform,currentTime/1000.0);
+
     setMaterialUniforms(materials);
-	setObstacleUniforms(obstacles);
+
+    // Loads any new obstacles which may be in view
+    if (loadNewObstacles(currentLevel)) {
+        setObstacleUniforms(obstacles);
+    }
 
     // We need to calculate the rotation matrix from
     // view to world.
@@ -905,6 +1065,18 @@ function render(time) {
 		// Player pos uniform
 		gl.uniform3fv(playerPosUniform, new Float32Array(playerPos));
 
+        // Move camera to player
+        cameraPos[1] = playerPos[1] + 4.5;
+        cameraPos[2] = playerPos[2] + 20.0;
+
+        // loadNewObstacles loads any obstacles which
+        // are newly in view, and returns true
+        // if any new obstacles were loaded,
+        // otherwise false.
+        if (loadNewObstacles(currentLevel)) {
+            setObstacleUniforms(obstacles);
+        }
+
 		// Move the projectile (if it exists, of course.)
 		if (projectileExists) {
 			projectilePos[2] -= deltaTime*(originalProjectileSpeed*0.01+relativeProjectileSpeed*0.08)/NUM_PHYSICS_SUBSTEPS;
@@ -912,7 +1084,7 @@ function render(time) {
 
 		if (projectileExists &&
 			((projectilePos[2] - cameraPos[2]) < -288.0 ||
-			  projectilePos[2] - winPosition < 10.0)) {
+			  projectilePos[2] < winPosition - 0.5)) {
 			// The projectile is out of view.
 			// So it's reshootable.
 			projectileExists = false;
@@ -977,10 +1149,6 @@ function render(time) {
 	setLightUniforms(lights);
 	setDirectionalLightUniforms(directionalLights);
 
-	// Move camera to player
-	cameraPos[1] = playerPos[1] + 4.5;
-	cameraPos[2] = playerPos[2] + 20.0;
-
 	// Camera pos uniform
 	gl.uniform3fv(cameraPosUniform, new Float32Array(cameraPos));
 
@@ -1028,6 +1196,7 @@ function handleContextLost(event) {
 function initGame() {
     canvas = document.getElementById('canvas');
     container = document.getElementById('container');
+    levelMenu = document.getElementById('levelMenu');
     gameOverMenu = document.getElementById('gameOverMenu');
     winMenu = document.getElementById('winMenu');
     pauseButton = document.getElementById('pause');
@@ -1057,6 +1226,10 @@ function initGame() {
         'webglcontextrestored', setupWebGLState, false
     );
     
+    // Add buttons for level selection
+    // to the level select menu.
+    addLevelButtons(levelMenu);
+
     
     // Now we create the shaders.
     // The 'vertex shader' is run
@@ -1098,8 +1271,8 @@ function initGame() {
             // (pause)
             document.addEventListener("visibilitychange", handleVisibilityChange, false);
 
-			// Now we start the render loop
-			startGame();
+			// Launch into level selection
+            selectLevel();
         };
         fragReq.open("GET", "fragment-shader.glsl");
         fragReq.responseType = "text";
