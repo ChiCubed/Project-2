@@ -279,7 +279,7 @@ HitPoint scene(vec3 p) {
         length(vec3(p.x-cos(time)*2.0,p.y-4.0-sin(time)*2.0,p.z-winPosition))-1.0,
         length(vec3(p.x+cos(time)*2.0,p.y-4.0+sin(time)*2.0,p.z-winPosition))-1.0
     );
-    winHit.dist = smin(winHit.dist, winOrnamentDist, 0.6);
+	winHit.dist = smin(winHit.dist, winOrnamentDist, 0.6);
 
     // obstacles
     HitPoint obstacleHit = sceneObstacles(p);
@@ -550,6 +550,8 @@ void main() {
 
             if (playerHit.dist < 0.0) {
                 // player intersecting an obstacle
+				// we divide the obstacle id by 255 to get it in the range [0,1].
+				// this is remapped to the range [0,255] by GLSL.
                 gl_FragColor.r = float(playerHit.oid) / 255.0;
             }
 

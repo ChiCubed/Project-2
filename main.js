@@ -104,6 +104,8 @@ var collisionTextureHeight = 1;
 var collisionTexture;
 var collisionFramebuffer;
 
+var NUM_PHYSICS_SUBSTEPS = 8;
+
 var MAX_NUM_LIGHTS = 32;
 var MAX_NUM_DIRECTIONAL_LIGHTS = 32;
 var MAX_NUM_MATERIALS = 32;
@@ -715,92 +717,8 @@ function handleVisibilityChange() {
 }
 
 
-// This is the rendering function.
-// This will cause WebGL to render
-// the scene, and does most of
-// the game logic.
-function render(time) {
-    // sanity check
-    if (program === null) {
-        // The program hasn't loaded yet! :O
-        return;
-    }
-    
-
-    // setup the browser for the
-	// next frame
-    requestId = requestAnimationFrame(render, canvas);
-
-    // check if player has won level
-    if (playerPos[2] <= winPosition) {
-        winGame();
-    }
-
-	var deltaTime = time - lastFrameTime;
-	var currentTime = time - startTime;
-
-    // Update the scene
-    var isMovingRight = (rightPressed && !leftPressed);
-    var isMovingLeft  = (leftPressed && !rightPressed);
-
-    // how far out the wall is at the moment.
-    var wallDist = 4.5 + Math.sin(0.1 * playerPos[2]) * 0.5;
-
-    // If the player is touching the wall, we
-    // want to rotate them back in the other direction,
-    // to bounce them off.
-    // We use 4.5 because this is
-    // (wall distance from center) - (half player width).
-    // Also if the player is trying to move _away_ from
-    // the wall, or they're rotated away,
-	// we don't want them to get stuck.
-    if (playerPos[0] >  wallDist && !isMovingLeft ||
-        playerPos[0] < -wallDist && !isMovingRight) {
-		if (playerPos[0] > wallDist) {
-			playerPos[0] = wallDist;
-		} else {
-			playerPos[0] =-wallDist;
-		}
-        playerRotation = -playerRotation*0.9;
-    } else {
-        // We're not touching the wall.
-	    // We rotate the player based on
-        // which keys are pressed.
-	    // If both are pressed there should
-	    // be no rotation.
-        if (isMovingRight) {
-            // tilt right
-            // rotation is anticlockwise
-            // so this is negative, not positive.
-            playerRotation -= deltaTime*rotationSpeed*0.007*(playerRotation+maxRotation);
-        } else if (isMovingLeft) {
-            // tilt left
-            playerRotation += deltaTime*rotationSpeed*0.007*(-playerRotation+maxRotation);
-        } else {
-            // tilt to center
-            playerRotation -= playerRotation*deltaTime*rotationSpeed*0.007;
-        }
-    }
-
-    // Speed up
-	playerSpeed += deltaTime*0.000005;
-
-	// The player rotation and movement
-	// are linked, to make movement smooth.
-	// In particular, the player moves
-	// based on their rotation.
-	// We subtract the player rotation
-	// instead of adding it since the rotation
-	// is anticlockwise.
-	playerPos[0] -= (playerRotation/maxRotation)*deltaTime*movementSpeed*0.01;
-    
-    // Move player forwards
-    playerPos[2] -= deltaTime*playerSpeed*0.02;
-
-	// Rotate wall colour
-	materials[1].diffuse = rotateHue([0.35,0.25,0.7], currentTime*0.01);
-
-    // Move the 'player light' to near the player
+function moveLights() {
+	// Move the 'player light' to near the player
     // We scale down the player position to prevent
     // the light from getting close to a wall,
     // which would cause artifacts.
@@ -844,44 +762,68 @@ function render(time) {
     lights[4].pos[0] = 0.0;
     lights[4].pos[1] = 2.0;
     lights[4].pos[2] = winPosition + 5.0;
+}
 
-    // Move camera to player
-    cameraPos[1] = playerPos[1] + 4.5;
-    cameraPos[2] = playerPos[2] + 20.0;
-
-    // Move the projectile (if it exists, of course.)
-    if (projectileExists) {
-        projectilePos[2] -= deltaTime*(originalProjectileSpeed*0.01+relativeProjectileSpeed*0.08);
+// This is the rendering function.
+// This will cause WebGL to render
+// the scene, and does most of
+// the game logic.
+function render(time) {
+    // sanity check
+    if (program === null) {
+        // The program hasn't loaded yet! :O
+        return;
     }
 
-    if (projectileExists &&
-        ((projectilePos[2] - cameraPos[2]) < -288.0 ||
-          projectilePos[2] - winPosition < 10.0)) {
-        // The projectile is out of view.
-        // So it's reshootable.
-        projectileExists = false;
+
+    // setup the browser for the
+	// next frame
+    requestId = requestAnimationFrame(render, canvas);
+
+    // check if player has won level
+    if (playerPos[2] <= winPosition) {
+        winGame();
     }
+
+	var deltaTime = time - lastFrameTime;
+	var currentTime = time - startTime;
+
+    // Update the scene
+    var isMovingRight = (rightPressed && !leftPressed);
+    var isMovingLeft  = (leftPressed && !rightPressed);
+
+	// We rotate the player based on
+	// which keys are pressed.
+	// If both are pressed there should
+	// be no rotation.
+	if (isMovingRight) {
+		// tilt right
+		// rotation is anticlockwise
+		// so this is negative, not positive.
+		playerRotation -= deltaTime*rotationSpeed*0.007*(playerRotation+maxRotation);
+	} else if (isMovingLeft) {
+		// tilt left
+		playerRotation += deltaTime*rotationSpeed*0.007*(-playerRotation+maxRotation);
+	} else {
+		// tilt to center
+		playerRotation -= playerRotation*deltaTime*rotationSpeed*0.007;
+	}
+
+	// Speed up
+	playerSpeed += deltaTime*0.000005;
+
+	// Rotate wall colour
+	materials[1].diffuse = rotateHue([0.35,0.25,0.7], currentTime*0.01);
 
 	// Tell WebGL to use our shader program.
     gl.useProgram(program);
 
 	// Set the uniforms
     gl.uniform2f(screenSizeUniform, canvas.width, canvas.height);
-    gl.uniform3fv(cameraPosUniform, new Float32Array(cameraPos));
-    gl.uniform3fv(playerPosUniform, new Float32Array(playerPos));
     // divide by 1000: ms -> s
     gl.uniform1f(timeUniform,currentTime/1000.0);
-    setLightUniforms(lights);
-    setDirectionalLightUniforms(directionalLights);
     setMaterialUniforms(materials);
 	setObstacleUniforms(obstacles);
-
-    // Projectile uniform
-    gl.uniform1f(projectileExistsUniform, projectileExists);
-    if (projectileExists) {
-        // We want to send the data to be drawn.
-        gl.uniform3fv(projectilePosUniform, new Float32Array(projectilePos));
-    }
 
 	// We calculate the rotation matrix for player rotation.
     // First calculate the transformation matrix.
@@ -915,65 +857,132 @@ function render(time) {
     // Not strictly necessary to do every frame.
     gl.uniform1f(winPositionUniform, winPosition);
 
-
-
 	// Render to the collision texture.
 	// The fragment shader writes to the
 	// red and green components of the
 	// pixel at (0,0), indicating
 	// which obstacle the player and the
 	// projectile have collided with respectively.
-	// (The ID is divided by 255.)
-	// 1.0 indicates no collision.
+	// 255 indicates no collision.
 	gl.bindFramebuffer(gl.FRAMEBUFFER, collisionFramebuffer);
-
-	// Background colour: all zeroes
-    gl.clearColor(0.0, 0.0, 0.0, 0.0);
-    // Clear the texture.
-    gl.clear(gl.COLOR_BUFFER_BIT);
 
 	gl.uniform1f(isCollisionDetectionUniform, true);
 
-	// Execute the shader programs
-    // The gl.TRIANGLES indicates to draw triangles;
-    // the 6 indicates there are 6 vertices.
-	// This is done after updating to ensure
-	// the drawn version is as up-to-date
-	// as possible.
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
-    // Wait for drawing to finish
-    gl.finish();
+	// how far out the wall is at the moment.
+    var wallDist = 4.5 + Math.sin(0.1 * playerPos[2]) * 0.5;
 
-	// Use collision information
-	var collisionData = new Uint8Array(4);
-	gl.readPixels(0,0,1,1,gl.RGBA,gl.UNSIGNED_BYTE, collisionData);
+	// Collision detection.
+	// Move player + projectile in increments.
+	for (var i = 0; i < NUM_PHYSICS_SUBSTEPS; ++i) {
+		// The player rotation and movement
+		// are linked, to make movement smooth.
+		// In particular, the player moves
+		// based on their rotation.
+		// We subtract the player rotation
+		// instead of adding it since the rotation
+		// is anticlockwise.
+		playerPos[0] -= (playerRotation/maxRotation)*deltaTime*movementSpeed*0.01/NUM_PHYSICS_SUBSTEPS;
 
-    var obstacleToRemove = null;
+		// If the player is touching the wall, we
+		// want to rotate them back in the other direction,
+		// to bounce them off.
+		// Also if the player is trying to move _away_ from
+		// the wall, or they're rotated away,
+		// we don't want them to get stuck.
+		if (playerPos[0] >  wallDist && !isMovingLeft ||
+			playerPos[0] < -wallDist && !isMovingRight) {
+			if (playerPos[0] > wallDist) {
+				playerPos[0] = wallDist;
+			} else {
+				playerPos[0] =-wallDist;
+			}
+			playerRotation = -playerRotation*0.9;
+		}
 
-    if (collisionData[1] != 255) {
-        // Destroy projectile
-        projectileExists = false;
+		// Move player forwards
+		playerPos[2] -= deltaTime*playerSpeed*0.02/NUM_PHYSICS_SUBSTEPS;
 
-        // Get rid of the collided obstacle
-        obstacleToRemove = collisionData[1];
-    }
+		// Player pos uniform
+		gl.uniform3fv(playerPosUniform, new Float32Array(playerPos));
 
-    if (collisionData[0] != 255) {
-        // Player collision: you lose!
-        if (collisionData[0] != obstacleToRemove) {
-            loseGame();
-        }
-    }
+		// Move the projectile (if it exists, of course.)
+		if (projectileExists) {
+			projectilePos[2] -= deltaTime*(originalProjectileSpeed*0.01+relativeProjectileSpeed*0.08)/NUM_PHYSICS_SUBSTEPS;
+		}
 
-    // Remove the obstacle
-    if (obstacleToRemove !== null) {
-        obstacles.splice(obstacleToRemove, 1);
+		if (projectileExists &&
+			((projectilePos[2] - cameraPos[2]) < -288.0 ||
+			  projectilePos[2] - winPosition < 10.0)) {
+			// The projectile is out of view.
+			// So it's reshootable.
+			projectileExists = false;
+		}
 
-        // We'll want to re-send the data about
-        // obstacles as well, so the removed one isn't
-        // rendered.
-        setObstacleUniforms(obstacles);
-    }
+		// Projectile uniform
+		gl.uniform1f(projectileExistsUniform, projectileExists);
+		if (projectileExists) {
+			// We want to send the data to be drawn.
+			gl.uniform3fv(projectilePosUniform, new Float32Array(projectilePos));
+		}
+
+		// Background colour: all zeroes
+		gl.clearColor(0.0, 0.0, 0.0, 0.0);
+		// Clear the texture.
+		gl.clear(gl.COLOR_BUFFER_BIT);
+
+		// Execute the shader programs
+		// The gl.TRIANGLES indicates to draw triangles;
+		// the 6 indicates there are 6 vertices.
+		// This is done after updating to ensure
+		// the drawn version is as up-to-date
+		// as possible.
+		gl.drawArrays(gl.TRIANGLES, 0, 6);
+		// Wait for drawing to finish
+		gl.finish();
+
+		// Use collision information
+		var collisionData = new Uint8Array(4);
+		gl.readPixels(0,0,1,1,gl.RGBA,gl.UNSIGNED_BYTE, collisionData);
+
+		var obstacleToRemove = null;
+
+		if (collisionData[1] != 255) {
+			// Destroy projectile
+			projectileExists = false;
+
+			// Get rid of the collided obstacle
+			obstacleToRemove = collisionData[1];
+		}
+
+		if (collisionData[0] != 255) {
+			// Player collision: you lose!
+			if (collisionData[0] != obstacleToRemove) {
+				loseGame();
+			}
+		}
+
+		// Remove the obstacle
+		if (obstacleToRemove !== null) {
+			obstacles.splice(obstacleToRemove, 1);
+
+			// We'll want to re-send the data about
+			// obstacles as well, so the removed one isn't
+			// rendered.
+			setObstacleUniforms(obstacles);
+		}
+	}
+
+	// Move lights to player
+	moveLights();
+	setLightUniforms(lights);
+	setDirectionalLightUniforms(directionalLights);
+
+	// Move camera to player
+	cameraPos[1] = playerPos[1] + 4.5;
+	cameraPos[2] = playerPos[2] + 20.0;
+
+	// Camera pos uniform
+	gl.uniform3fv(cameraPosUniform, new Float32Array(cameraPos));
 
 
     // The following code is for actual rendering
