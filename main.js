@@ -3,6 +3,13 @@
 // by Mozilla Contributors, licensed under CC-BY-SA 2.5.
 
 var canvas; // The canvas element.
+var screenshotCanvas; // Screenshot canvas element.
+var screenshotCtx; // Screenshot 2d context.
+var screenshotFb; // Screenshot framebuffer.
+// screenshot width / height
+var screenshotWidth = 3840;
+var screenshotHeight = 2160;
+var screenshotData = new Uint8Array(4 * screenshotWidth * screenshotHeight);
 var container; // Container for canvas + pause button.
 var gl; // The WebGL context.
 var verticesBuffer; // Vertex Buffer Object.
@@ -599,9 +606,26 @@ function setupWebGLState() {
 	// attach texture
 	gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, collisionTexture, level);
 
-    // The reason we can't just get the program attribute locations is that
+
+    // Now for the screenshot texture!
+    var screenshotTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, screenshotTexture);
+
+	gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, screenshotWidth, screenshotHeight, border, format, type, data);
+
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+	screenshotFb = gl.createFramebuffer();
+	gl.bindFramebuffer(gl.FRAMEBUFFER, screenshotFb);
+
+	gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, screenshotTexture, level);
+
+
+    // The reason we can't just get the program attribute locations now is that
     // the program is dynamically generated for each level that we play, and
-    // therefore might not exist when this is called.
+    // therefore will not exist when this function is called.
 }
 
 
@@ -686,6 +710,13 @@ function shakeCanvas(time) {
 
     shakeFramesLeft--;
     requestAnimationFrame(shakeCanvas);
+}
+
+
+// sets canvas width / height
+function setCanvasSize(width, height) {
+    canvas.width = width;
+    canvas.height = height;
 }
 
 
@@ -1258,6 +1289,57 @@ function render(time) {
 }
 
 
+function takeScreenshot() {
+    // Takes a screenshot.
+    // https://stackoverflow.com/questions/8191083/can-one-easily-create-an-html-image-element-from-a-webgl-texture-object
+
+    // bind screenshot framebuffer
+	gl.bindFramebuffer(gl.FRAMEBUFFER, screenshotFb);
+
+    // change viewport
+    gl.viewport(0, 0, screenshotWidth, screenshotHeight);
+    gl.uniform2f(screenSizeUniform, screenshotWidth, screenshotHeight);
+
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
+    // just in case
+	gl.uniform1f(isCollisionDetectionUniform, false);
+
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    gl.finish();
+
+    // reset viewport
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.uniform2f(screenSizeUniform, canvas.width, canvas.height);
+
+    // screenshot information
+    gl.readPixels(0, 0, screenshotWidth, screenshotHeight, gl.RGBA, gl.UNSIGNED_BYTE, screenshotData);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+    // WebGL uses a different coordinate system to canvas,
+    // so we have to invert it. We do this by
+    // storing the pixel information from WebGL, and then
+    // drawing the image onto itself but upside down.
+    screenshotCtx.setTransform(1, 0, 0, -1, 0, screenshotHeight);
+    var imageData = screenshotCtx.createImageData(screenshotWidth, screenshotHeight);
+    imageData.data.set(screenshotData);
+    // This does not take into account the transformation.
+    screenshotCtx.putImageData(imageData, 0, 0);
+    // This takes into account the transformation.
+    screenshotCtx.drawImage(screenshotCanvas, 0, 0);
+
+    screenshotCanvas.toBlob(function(blob) {
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'screenshot.png';
+        a.innerHTML = 'download';
+        a.click();
+    });
+}
+
+
 function handleContextLost(event) {
     event.preventDefault();
     console.log('The WebGL context was lost.');
@@ -1267,6 +1349,7 @@ function handleContextLost(event) {
 
 function initGame() {
     canvas = document.getElementById('canvas');
+    screenshotCanvas = document.getElementById('screenshot-canvas');
     container = document.getElementById('container');
     levelMenu = document.getElementById('levelMenu');
     gameOverMenu = document.getElementById('gameOverMenu');
@@ -1275,6 +1358,12 @@ function initGame() {
     pauseMenu = document.getElementById('pauseMenu');
     fpsElement = document.getElementById('fps');
     
+    // set screenshot canvas size
+    screenshotCanvas.width = screenshotWidth;
+    screenshotCanvas.height = screenshotHeight;
+
+    screenshotCtx = screenshotCanvas.getContext('2d');
+
     gl = initWebGL(canvas);
     
     // gl is a falsey value if

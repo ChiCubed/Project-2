@@ -10,6 +10,7 @@
       start the game as soon as the page loads
     -->
     <body onload="initGame()">
+        <canvas id="screenshot-canvas" style="display: none"></canvas>
         <div id="container">
             <div id="inner-container">
                 <!-- The main canvas element. -->
@@ -19,7 +20,8 @@
                 <div id="pauseMenu" class="menu" style="display: none">
                     <h1>Paused</h1>
                     <button id="resume" onclick="startGame()">Resume Game</button><br>
-                    <button class="selectLevelButton" onclick="selectLevel()">Return to Level Select</button>
+                    <button class="selectLevelButton" onclick="selectLevel()">Return to Level Select</button><br>
+                    <button onclick="takeScreenshot()">Take Screenshot</button>
                 </div>
                 <!-- Level select menu -->
                 <div id="levelMenu" class="menu" style="display: none">

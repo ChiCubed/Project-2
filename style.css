@@ -183,7 +183,3 @@ button:focus {
     background-clip: text;
     color: transparent;
 }
-
-.selectLevelButton {
-    margin-top: 30px;
-}
