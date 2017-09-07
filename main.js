@@ -193,7 +193,18 @@ var levels = [
         new Obstacle([ 1,0,-140],0.0,1,7,false,true),
         new Obstacle([ 2,0,-150],0.0,1,7,false,true),
         new Obstacle([ 3,0,-160],0.0,1,7,false,true),
-    ], -200.0, 'Alignment')
+    ], -200.0, 'Alignment'),
+    new Level([
+        new Obstacle([-2,2,-100],0.0,0,7,false,true),
+        new Obstacle([2,2,-100],0.0,0,7,false,true),
+        new Obstacle([-5,0.5,-100],1.57,0,7,false,true),
+        new Obstacle([ 5,0.5,-100],1.57,0,7,false,true),
+
+        new Obstacle([-2,2,-170],0.0,0,7,false,true),
+        new Obstacle([2,2,-170],0.0,0,7,false,true),
+        new Obstacle([-5,0.5,-170],1.57,0,6,true,true),
+        new Obstacle([ 5,0.5,-170],1.57,0,7,false,true),
+    ], -200.0, 'Collapsing Structure')
 ];
 
 
