@@ -33,7 +33,7 @@ var vertices = [
 ];
 
 // Shader sources
-var vertShaderSrc, fragShaderSrc;
+var vertShaderSrc, fragShaderSrc, obstacleSrc;
 
 // Light and DirectionalLight objects.
 function Light(pos, colour, intensity, range) {
@@ -58,16 +58,22 @@ function Material(diffuse, specular, shininess) {
 
 // Obstacle object.
 // Angle is around the z-axis.
-function Obstacle(pos, angle, type) {
+// mid is material id.
+function Obstacle(pos, angle, type, mid, destroyable, chasePlayer) {
 	this.pos = pos;
 	this.angle = angle;
 	this.type = type;
+    this.mid = mid;
+    this.destroyable = Boolean(destroyable);
+    this.chasePlayer = Boolean(chasePlayer);
+    this.exists = true;
 }
 
 // Level object.
-function Level(obstacles, winPosition) {
+function Level(obstacles, winPosition, title) {
     this.obstacles = obstacles;
     this.winPosition = winPosition;
+    this.title = title;
 }
 
 // More binding points
@@ -90,7 +96,7 @@ var materialShininessUniform;
 var numObstaclesUniform;
 var obstaclePosUniform;
 var obstacleInvRotationUniform;
-var obstacleTypeUniform;
+var obstacleExistsUniform;
 
 var projectilePosUniform;
 var projectileExistsUniform;
@@ -136,13 +142,6 @@ var materials = [
 	new Material([0.7,0.3,0.5],[1,1,1],8.0)
 ];
 var obstacles = [];
-// currentObstaclePosition stores the
-// index of the next obstacle to add
-// from the level. This allows us to
-// only have to store the obstacles
-// which are currently visible on the
-// screen.
-var currentObstaclePosition;
 // this stores how far the player
 // has to travel before they win.
 var winPosition;
@@ -155,21 +154,46 @@ var currentLevel;
 // in reverse.
 var levels = [
     new Level([
-        new Obstacle([0,0,-100],0.0,0),
-        new Obstacle([0,0,-200],0.0,1),
-        new Obstacle([0,0,-300],0.0,2)
-    ], -500.0),
+        new Obstacle([0,0,-100],0.0,0,6,true,false),
+        new Obstacle([0,0,-200],0.0,1,6,true,false),
+        new Obstacle([0,0,-300],0.0,2,6,true,false)
+    ], -500.0, 'Basics'),
     new Level([
-        new Obstacle([-1.6,0,-70],0.0,1),
-        new Obstacle([-0.8,0,-80],0.0,1),
-        new Obstacle([ 0.0,0,-90],0.0,1),
-        new Obstacle([ 0.8,0,-100],0.0,1),
-        new Obstacle([ 1.6,0,-110],0.0,1),
-        new Obstacle([ 0.8,0,-120],0.0,1),
-        new Obstacle([ 0.0,0,-130],0.0,1),
-        new Obstacle([-0.8,0,-140],0.0,1),
-        new Obstacle([-1.6,0,-150],0.0,1),
-    ], -170.0)
+        new Obstacle([-2,0,-80],0.0,0,7,false,false),
+        new Obstacle([2,0,-93],0.0,0,7,false,false),
+        new Obstacle([-2,0,-106],0.0,0,7,false,false)
+    ], -130.0, 'Indestructibles'),
+    new Level([
+        new Obstacle([-1.6,0,-70],0.0,1,6,true,false),
+        new Obstacle([-0.8,0,-80],0.0,1,7,false,false),
+        new Obstacle([ 0.0,0,-90],0.0,1,6,true,false),
+        new Obstacle([ 0.8,0,-100],0.0,1,7,false,false),
+        new Obstacle([ 1.6,0,-110],0.0,1,6,true,false),
+        new Obstacle([ 0.8,0,-120],0.0,1,7,false,false),
+        new Obstacle([ 0.0,0,-130],0.0,1,6,true,false),
+        new Obstacle([-0.8,0,-140],0.0,1,7,false,false),
+        new Obstacle([-1.6,0,-150],0.0,1,6,true,false)
+    ], -170.0, 'Precision'),
+    new Level([
+        new Obstacle([-2,0,-100],0.0,0,6,true,true),
+        new Obstacle([2,0,-200],0.0,2,7,false,true),
+    ], -250.0, 'Chasers'),
+    new Level([
+        new Obstacle([-3,0,-100],0.0,0,7,false,true),
+        new Obstacle([0,0,-100],0.0,1,7,false,true),
+        new Obstacle([3,0,-100],0.0,0,7,false,true),
+    ], -120.0, 'More Chasers'),
+    new Level([
+        new Obstacle([-4.2,0,-80],0.0,0,7,false,false),
+        new Obstacle([ 4.2,0,-80],0.0,0,7,false,false),
+        new Obstacle([-3,0,-100],0.0,1,7,false,true),
+        new Obstacle([-2,0,-110],0.0,1,7,false,true),
+        new Obstacle([-1,0,-120],0.0,1,7,false,true),
+        new Obstacle([ 0,0,-130],0.0,1,7,false,true),
+        new Obstacle([ 1,0,-140],0.0,1,7,false,true),
+        new Obstacle([ 2,0,-150],0.0,1,7,false,true),
+        new Obstacle([ 3,0,-160],0.0,1,7,false,true),
+    ], -200.0, 'Alignment')
 ];
 
 
@@ -198,6 +222,8 @@ var playerRotation = 0.0;
 var rotationSpeed = 1.0;
 var maxRotation = 0.4;
 var movementSpeed = 1.0;
+
+var obstacleChaseSpeed = 1.0;
 
 // Projectile.
 var relativeProjectileSpeed = 1.0;
@@ -350,7 +376,7 @@ function setObstacleUniforms(obstacleArray) {
 	}
 	var pos = new Array(MAX_NUM_OBSTACLES * 3);
 	var invRot = new Array(MAX_NUM_OBSTACLES * 9);
-	var type = new Array(MAX_NUM_OBSTACLES);
+    var exists = new Array(MAX_NUM_OBSTACLES);
 	var x; // inner loop var
 	for (var i=0; i<obstacleArray.length; ++i) {
 		for (x=0; x<3; ++x) {
@@ -363,11 +389,11 @@ function setObstacleUniforms(obstacleArray) {
 		for (x=0; x<9; ++x) {
 			invRot[i*9+x]=rot[x];
 		}
-		type[i]=obstacleArray[i].type;
+        exists[i] = obstacleArray[i].exists;
 	}
 	gl.uniform3fv(obstaclePosUniform, new Float32Array(pos));
 	gl.uniformMatrix3fv(obstacleInvRotationUniform, false, new Float32Array(invRot));
-	gl.uniform1iv(obstacleTypeUniform, type);
+    gl.uniform1fv(obstacleExistsUniform, new Float32Array(exists));
 }
 
 
@@ -440,6 +466,17 @@ function trans3(m) {
 }
 
 
+// Function to mix two
+// 3x1 vectors.
+function mix3(x, y, a) {
+    return [
+        x[0]*(1.0 - a) + y[0]*a,
+        x[1]*(1.0 - a) + y[1]*a,
+        x[2]*(1.0 - a) + y[2]*a
+    ];
+}
+
+
 function initWebGL(canvas) {    
     var gl = null;
     
@@ -500,6 +537,16 @@ function createProgram(gl, vertexShader, fragmentShader) {
 }
 
 
+function generateProgramFromSources(vertex, fragment) {
+    var vertShader = createShader(gl, gl.VERTEX_SHADER, vertex);
+    var fragShader = createShader(gl, gl.FRAGMENT_SHADER, fragment);
+
+    // Now we 'link' them into a program
+    // which can be used by WebGL.
+    return createProgram(gl, vertShader, fragShader);
+}
+
+
 function setupWebGLState() {
     verticesBuffer = gl.createBuffer();
     // gl.ARRAY_BUFFER is a 'bind point'
@@ -512,32 +559,6 @@ function setupWebGLState() {
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, verticesBuffer);
-    
-    var vertShader = createShader(gl, gl.VERTEX_SHADER, vertShaderSrc);
-    var fragShader = createShader(gl, gl.FRAGMENT_SHADER, fragShaderSrc);
-
-    // Now we 'link' them into a program
-    // which can be used by WebGL.
-    program = createProgram(gl, vertShader, fragShader);
-
-    // The shader program now needs to know
-    // where the data being used in the
-    // vertex shader (namely the
-    // position attribute) is coming from.
-    // We set that here.
-    var positionAttribLoc = gl.getAttribLocation(program, 'position');
-    gl.enableVertexAttribArray(positionAttribLoc);
-
-    // We now tell WebGL how to extract
-    // data out of the array verticesBuffer
-    // and give it to the vertex shader.
-    // The three main arguments are the
-    // first three. In order these indicate:
-    // 1.  where to bind the current ARRAY_BUFFER to
-    // 2.  how many components there are per attribute
-    //       (in this case two)
-    // 3.  the type of the data
-    gl.vertexAttribPointer(positionAttribLoc, 2, gl.FLOAT, false, 0, 0);
 
 	// Create the texture for collision detection
 	// red component is player collision,
@@ -566,6 +587,32 @@ function setupWebGLState() {
 
 	// attach texture
 	gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, collisionTexture, level);
+
+    // The reason we can't just get the program attribute locations is that
+    // the program is dynamically generated for each level that we play, and
+    // therefore might not exist when this is called.
+}
+
+
+function getProgramAttribLocations() {
+    // The shader program now needs to know
+    // where the data being used in the
+    // vertex shader (namely the
+    // position attribute) is coming from.
+    // We set that here.
+    var positionAttribLoc = gl.getAttribLocation(program, 'position');
+    gl.enableVertexAttribArray(positionAttribLoc);
+
+    // We now tell WebGL how to extract
+    // data out of the array verticesBuffer
+    // and give it to the vertex shader.
+    // The three main arguments are the
+    // first three. In order these indicate:
+    // 1.  where to bind the current ARRAY_BUFFER to
+    // 2.  how many components there are per attribute
+    //       (in this case two)
+    // 3.  the type of the data
+    gl.vertexAttribPointer(positionAttribLoc, 2, gl.FLOAT, false, 0, 0);
 
 
     // We also get the uniform locations,
@@ -596,7 +643,7 @@ function setupWebGLState() {
 	numObstaclesUniform = gl.getUniformLocation(program, "numObstacles");
 	obstaclePosUniform = gl.getUniformLocation(program, "obstaclePos");
 	obstacleInvRotationUniform = gl.getUniformLocation(program, "obstacleInvRotation");
-	obstacleTypeUniform = gl.getUniformLocation(program, "obstacleType");
+    obstacleExistsUniform = gl.getUniformLocation(program, "obstacleExists");
 
     projectileExistsUniform = gl.getUniformLocation(program, "projectileExists");
     projectilePosUniform = gl.getUniformLocation(program, "projectilePos");
@@ -652,7 +699,7 @@ function addLevelButtons(levelMenuElem) {
     for (var i = 0; i < levels.length; ++i) {
         var btn = document.createElement('button');
         // automatically converted to string
-        btn.innerHTML = i+1;
+        btn.innerHTML = i+1 + '. ' + levels[i].title;
         btn.className = 'levelButton';
         btn.onclick = levelLoader(i);
         lvlBtnMenu.appendChild(btn);
@@ -681,8 +728,33 @@ function selectLevel() {
     pauseMenu.style.display = 'none';
 }
 
+
+function injectObstacleSceneData(fragment, obstacles) {
+    // We inject the data for the obstacles
+    // into the GLSL.
+    var sceneObstacles = 'HitPoint obstacleHit = HitPoint(FAR_DIST, 0, 255);\n' +
+                         'HitPoint thisHit;';
+
+    for (var i = 0; i < obstacles.length; ++i) {
+        sceneObstacles += 'thisHit = obstacleDist'+obstacles[i].type+'(\n' +
+                          '    FAR_DIST * (1.0 - obstacleExists['+i+']) +\n' +
+                          '    obstacleInvRotation['+i+']*(p - obstaclePos['+i+']),\n' +
+                          '    ' + obstacles[i].mid + ',\n' +
+                          '    ' + i + '\n' +
+                          ');\n' +
+                          'obstacleHit = min(obstacleHit, thisHit);\n';
+    }
+
+    sceneObstacles += 'return obstacleHit;\n';
+
+    return fragment.replace('_PLACEHOLDER_FOR_OBSTACLE_SCENE_DATA', sceneObstacles);
+}
+
+
 // This function loads a new level.
-// Basically this just sets the currentLevel
+// Basically this just sets the currentLevel,
+// recompiles the program to include the
+// obstacles for the current scene,
 // and starts the game.
 function loadLevel(levelID) {
     // We don't want to load the level
@@ -691,44 +763,14 @@ function loadLevel(levelID) {
 
     currentLevel = levelID;
 
+    var newFragShaderSrc = injectObstacleSceneData(fragShaderSrc, levels[levelID].obstacles);
+    program = generateProgramFromSources(vertShaderSrc, newFragShaderSrc);
+    // This function does things like get the locations of uniforms
+    // so we can set them. Always a handy thing to be able to do.
+    getProgramAttribLocations();
+
     // start the level
     startGame();
-}
-
-
-function loadNewObstacles(levelID) {
-    // (Psst. This function also
-    //  deletes old obstacles.)
-
-    var canDeleteOldObstacle = (obstacles.length > 0 && obstacles[0].pos[2] > cameraPos[2] + 32.0);
-
-    // loads new obstacles from the
-    // current level into the
-    // obstacles array.
-    if ((currentObstaclePosition >= levels[levelID].obstacles.length ||
-         levels[levelID].obstacles[currentObstaclePosition].pos[2] < cameraPos[2] - 304.0) &&
-        !canDeleteOldObstacle) {
-        // The next obstacle is out of view (or there aren't any more)
-        // so we won't be adding any new obstacles today.
-        return false;
-    }
-
-    while (currentObstaclePosition < levels[levelID].obstacles.length &&
-           levels[levelID].obstacles[currentObstaclePosition].pos[2] >= cameraPos[2] - 304.0) {
-        // add this obstacle, since it's close enough to in sight
-        // the 'currentObstaclePosition++' means that the below expression is
-        // the same as the following two expressions:
-        // 1. obstacles.push(levels[levelID].obstacles[currentObstaclePosition]);
-        // 2. currentObstaclePosition += 1;
-        console.log('Loaded new obstacle');
-        obstacles.push(levels[levelID].obstacles[currentObstaclePosition++]);
-    }
-
-    while (obstacles.length > 0 && obstacles[0].pos[2] > cameraPos[2] + 32.0) {
-        obstacles.shift(); // removes first element
-    }
-
-    return true;
 }
 
 
@@ -795,8 +837,17 @@ function startGame() {
         // reset vars
         playerPos = [0.0, 0.0, 0.0];
         playerSpeed = 1.0;
+        projectileExists = false;
+        // Create a copy of the obstacles
+        // We have to make a deep copy so we don't
+        // modify the originals.
         obstacles = [];
-        currentObstaclePosition = 0;
+        for (var i = 0; i < levels[currentLevel].obstacles.length; ++i) {
+            var x = levels[currentLevel].obstacles[i];
+            // We do .slice() on x.pos to create a copy
+            // of the array.
+            obstacles.push(new Obstacle(x.pos.slice(), x.angle, x.type, x.mid, x.destroyable, x.chasePlayer));
+        }
         winPosition = levels[currentLevel].winPosition;
 
         // show pause button, hide pause menu
@@ -919,6 +970,20 @@ function moveLights() {
     lights[4].pos[2] = winPosition + 5.0;
 }
 
+
+function chasePlayer(chaseSpeed) {
+    var anyMoved = false;
+    for (var i = 0; i < obstacles.length; ++i) {
+        if (obstacles[i].chasePlayer) {
+            anyMoved = true;
+            // make obstacle move towards player
+            obstacles[i].pos = mix3(obstacles[i].pos, playerPos, chaseSpeed);
+        }
+    }
+    return anyMoved;
+}
+
+
 // This is the rendering function.
 // This will cause WebGL to render
 // the scene, and does most of
@@ -979,11 +1044,7 @@ function render(time) {
     gl.uniform1f(timeUniform,currentTime/1000.0);
 
     setMaterialUniforms(materials);
-
-    // Loads any new obstacles which may be in view
-    if (loadNewObstacles(currentLevel)) {
-        setObstacleUniforms(obstacles);
-    }
+    setObstacleUniforms(obstacles);
 
     // We need to calculate the rotation matrix from
     // view to world.
@@ -1065,17 +1126,16 @@ function render(time) {
 		// Player pos uniform
 		gl.uniform3fv(playerPosUniform, new Float32Array(playerPos));
 
+        // chasePlayer makes obstacles chase the player.
+        // returns true if any obstacles were moved, in which
+        // case the obstacle uniforms must be changed.
+        if (chasePlayer(obstacleChaseSpeed*deltaTime*0.0003/NUM_PHYSICS_SUBSTEPS)) {
+            setObstacleUniforms(obstacles);
+        }
+
         // Move camera to player
         cameraPos[1] = playerPos[1] + 4.5;
         cameraPos[2] = playerPos[2] + 20.0;
-
-        // loadNewObstacles loads any obstacles which
-        // are newly in view, and returns true
-        // if any new obstacles were loaded,
-        // otherwise false.
-        if (loadNewObstacles(currentLevel)) {
-            setObstacleUniforms(obstacles);
-        }
 
 		// Move the projectile (if it exists, of course.)
 		if (projectileExists) {
@@ -1116,7 +1176,7 @@ function render(time) {
 		var collisionData = new Uint8Array(4);
 		gl.readPixels(0,0,1,1,gl.RGBA,gl.UNSIGNED_BYTE, collisionData);
 
-		var obstacleToRemove = null;
+        var obstacleToRemove = null;
 
 		if (collisionData[1] != 255) {
 			// Destroy projectile
@@ -1134,8 +1194,9 @@ function render(time) {
 		}
 
 		// Remove the obstacle
-		if (obstacleToRemove !== null) {
-			obstacles.splice(obstacleToRemove, 1);
+        // (obviously we only do this if it's destroyable)
+		if (obstacleToRemove !== null && obstacles[obstacleToRemove].destroyable) {
+			obstacles[obstacleToRemove].exists = false;
 
 			// We'll want to re-send the data about
 			// obstacles as well, so the removed one isn't
@@ -1261,18 +1322,31 @@ function initGame() {
         fragReq.onload = function() {
             fragShaderSrc = this.response;
             
-            setupWebGLState();
+            var obstReq = new XMLHttpRequest();
+            obstReq.onload = function() {
+                obstacleSrc = this.response;
 
-			// Add event listeners
-			// for the movement buttons
-			document.addEventListener("keydown", keyDownHandler, false);
-			document.addEventListener("keyup", keyUpHandler, false);
-            // Add event listener for tab change
-            // (pause)
-            document.addEventListener("visibilitychange", handleVisibilityChange, false);
+                // Replace the placeholder in the fragment shader source
+                // with the obstacle source.
 
-			// Launch into level selection
-            selectLevel();
+                fragShaderSrc = fragShaderSrc.replace('_PLACEHOLDER_FOR_OBSTACLE_DISTANCE_FUNCTIONS', obstacleSrc);
+
+                setupWebGLState();
+
+                // Add event listeners
+                // for the movement buttons
+                document.addEventListener("keydown", keyDownHandler, false);
+                document.addEventListener("keyup", keyUpHandler, false);
+                // Add event listener for tab change
+                // (pause)
+                document.addEventListener("visibilitychange", handleVisibilityChange, false);
+
+                // Launch into level selection
+                selectLevel();
+            };
+            obstReq.open("GET", "obstacles.glsl");
+            obstReq.responseType = "text";
+            obstReq.send();
         };
         fragReq.open("GET", "fragment-shader.glsl");
         fragReq.responseType = "text";

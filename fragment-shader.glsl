@@ -67,7 +67,11 @@ const int MAX_NUM_OBSTACLES = 32;
 
 uniform vec3 obstaclePos[MAX_NUM_OBSTACLES];
 uniform mat3 obstacleInvRotation[MAX_NUM_OBSTACLES];
-uniform int obstacleType[MAX_NUM_OBSTACLES];
+// this is a float array containing either 0.0 or 1.0.
+// this means we don't have to cast this to a float
+// when we actually use it, in the sceneObstacles
+// function. (See main.js for how this is defined.)
+uniform float obstacleExists[MAX_NUM_OBSTACLES];
 
 uniform int numObstacles;
 
@@ -164,61 +168,17 @@ float smin(float a, float b, float k) {
     return mix(b,a,h) - k*h*(1.0-h);
 }
 
+// Distance functions for obstacles.
+// This is filled in by JavaScript later.
+_PLACEHOLDER_FOR_OBSTACLE_DISTANCE_FUNCTIONS
+
 // Distance function for everything except the
 // player, projectile, walls, floor, and ornaments.
 // (Essentially, this is the obstacles.)
 HitPoint sceneObstacles(vec3 p) {
-    // Obstacles (materials 5+)
-	HitPoint obstacleHit = HitPoint(FAR_DIST,0,255);
-
-	for (int i = 0; i < MAX_NUM_OBSTACLES; ++i) {
-		if (i == numObstacles) break;
-		vec3 tmp = obstacleInvRotation[i]*(p - obstaclePos[i]);
-		HitPoint thisObstacle = HitPoint(0.0,0,0);
-
-        // In GLSL, conditionals are generally slow,
-        // so we try to not use them. Instead, we multiply
-        // by booleans cast to floats / ints.
-        // The occurences of (1.0 - abs(sign(x-c))), where c is some number,
-        // indicate that the expression will evaluate to true if and only if
-        // x == c. This of course has a float type and thus is unsuitable
-        // for the integers - there we use int(x == c).
-
-		float x = float(obstacleType[i]);
-
-		// http://iquilezles.org/www/articles/distfunctions/distfunctions.htm
-
-        // just an ordinary box (obstacle ID 0)
-		// oid of a hitpoint represents the obstacle index
-        vec3 d = abs(tmp) - BOX_SIZE;
-        thisObstacle.dist += (min(max(d.x,max(d.y,d.z)),0.0) + length(max(d,0.0))) * (1.0 - abs(sign(x)));
-		thisObstacle.oid += i * int(x == 0.0);
-        thisObstacle.mid += 6 * int(x == 0.0);
-
-        // For torus (obstacle ID 1)
-        vec2 q = vec2(length(tmp.xy)-TORUS_SIZE.x,tmp.z);
-        thisObstacle.dist += (length(q)-TORUS_SIZE.y) * (1.0 - abs(sign(x - 1.0)));
-		thisObstacle.oid += i * int(x == 1.0);
-        thisObstacle.mid += 6 * int(x == 1.0);
-
-        // For sphere (obstacle ID 2)
-        thisObstacle.dist += (length(tmp)-SPHERE_SIZE.x) * (1.0 - abs(sign(x - 2.0)));
-        thisObstacle.oid += i * int(x == 2.0);
-        thisObstacle.mid += 6 * int(x == 2.0);
-
-
-
-        // Note that, if an obstacle has an invalid
-        // ID, it'll cause the distance to be 0.
-        // There isn't a conditional here to check for that,
-        // since conditionals are expensive in GLSL.
-
-        // if (thisObstacle.dist == 0.0) thisObstacle.dist = FAR_DIST;
-
-		obstacleHit = min(obstacleHit, thisObstacle);
-	}
-
-    return obstacleHit;
+    // The following is a placeholder
+    // for the scene obstacle code to be inserted.
+    _PLACEHOLDER_FOR_OBSTACLE_SCENE_DATA
 }
 
 // Distance function for the scene
