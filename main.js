@@ -825,23 +825,6 @@ function render(time) {
     setMaterialUniforms(materials);
 	setObstacleUniforms(obstacles);
 
-	// We calculate the rotation matrix for player rotation.
-    // First calculate the transformation matrix.
-    var pm = rotateZ(playerRotation);
-
-    // We should transpose it here to
-    // ensure the data is in the correct
-    // format for WebGL to use.
-    // However, then in the fragment shader
-    // we would have to find the inverse
-    // of the matrix. The inverse is just
-    // the matrix's transpose, so we do
-    // two transpositions, which is the same
-    // as doing nothing.
-
-    // Set uniform
-    gl.uniformMatrix3fv(invPlayerRotationUniform, false, new Float32Array(pm));
-
     // We need to calculate the rotation matrix from
     // view to world.
     // First get the transformation matrix.
@@ -898,6 +881,23 @@ function render(time) {
 			}
 			playerRotation = -playerRotation*0.9;
 		}
+
+		// We calculate the rotation matrix for player rotation.
+		// First calculate the transformation matrix.
+		var pm = rotateZ(playerRotation);
+
+		// We should transpose it here to
+		// ensure the data is in the correct
+		// format for WebGL to use.
+		// However, then in the fragment shader
+		// we would have to find the inverse
+		// of the matrix. The inverse is just
+		// the matrix's transpose, so we do
+		// two transpositions, which is the same
+		// as doing nothing.
+
+		// Set uniform
+		gl.uniformMatrix3fv(invPlayerRotationUniform, false, new Float32Array(pm));
 
 		// Move player forwards
 		playerPos[2] -= deltaTime*playerSpeed*0.02/NUM_PHYSICS_SUBSTEPS;

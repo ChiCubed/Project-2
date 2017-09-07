@@ -534,18 +534,23 @@ void main() {
 		if (gl_FragCoord.x < 1.0 && gl_FragCoord.y < 1.0) {
 			gl_FragColor = vec4(1,1,0,0);
 
+			vec3 tA = invPlayerRot * pA,
+				 tB = invPlayerRot * pB,
+				 tC = invPlayerRot * pC,
+				 tD = invPlayerRot * pD;
+
             // Distance from player.
             HitPoint playerHit = min(
-                sceneObstacles(playerPos + pA), min(
-                sceneObstacles(playerPos + pB), min(
-                sceneObstacles(playerPos + pC), min(
-                sceneObstacles(playerPos + pD), min(
-                sceneObstacles(playerPos + (pA+pB)/2.0), min(
-                sceneObstacles(playerPos + (pB+pC)/2.0), min(
-                sceneObstacles(playerPos + (pC+pA)/2.0), min(
-                sceneObstacles(playerPos + (pC+pD)/2.0), min(
-                sceneObstacles(playerPos + (pA+pB+pC)/3.0),
-                sceneObstacles(playerPos + (pB+pC+pD)/3.0)
+                sceneObstacles(playerPos + tA), min(
+                sceneObstacles(playerPos + tB), min(
+                sceneObstacles(playerPos + tC), min(
+                sceneObstacles(playerPos + tD), min(
+                sceneObstacles(playerPos + (tA+tB)/2.0), min(
+                sceneObstacles(playerPos + (tB+tC)/2.0), min(
+                sceneObstacles(playerPos + (tC+tA)/2.0), min(
+                sceneObstacles(playerPos + (tC+tD)/2.0), min(
+                sceneObstacles(playerPos + (tA+tB+tC)/3.0),
+                sceneObstacles(playerPos + (tB+tC+tD)/3.0)
             )))))))));
 
             if (playerHit.dist < 0.0) {
