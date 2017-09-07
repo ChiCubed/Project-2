@@ -1,5 +1,43 @@
+/* Fonts */
+@import url('https://fonts.googleapis.com/css?family=Roboto');
+
+/*
+ Text gradients generated with the
+ help of https://www.gradient-animator.com/
+*/
+
+@-webkit-keyframes MoveGradient {
+    0% {background-position:0% 50%}
+    50% {background-position:100% 50%}
+    100% {background-position:0% 50%}
+}
+@keyframes MoveGradient {
+    0% {background-position:0% 50%}
+    50% {background-position:100% 50%}
+    100% {background-position:0% 50%}
+}
+
 #container {
     position: relative;
+    overflow: hidden;
+    border-radius: 25px;
+    margin: 30px auto;
+    width: 680px;
+    height: 520px;
+
+    /* add a nice moving background */
+    background: linear-gradient(135deg, #5ee3c1, #2a61de, #0d2c48);
+    background-size: 600% 600%;
+
+    -webkit-animation: MoveGradient 10s ease infinite;
+    animation: MoveGradient 10s ease infinite;
+}
+
+#inner-container {
+    position: relative;
+    overflow: hidden;
+    border-radius: 15px;
+    margin: 20px auto;
     width: 640px;
     height: 480px;
 }
@@ -9,9 +47,15 @@
     width: 100%;
 }
 
+#fps {
+    font-family: Roboto;
+    text-align: center;
+}
+
 button {
     padding: 15px;
     font-size: 30px;
+    font-family: Roboto;
     border: 2px solid black;
     background-color: rgba(255, 255, 255, 0.6);
     /* prevent selection */
@@ -38,7 +82,7 @@ button:focus {
     width: 100%;
     height: 100%;
     top: 0px;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.7);
 }
 
 #pause {
@@ -52,10 +96,8 @@ button:focus {
     margin-top: 100px;
 
     text-align: center;
-    font-family: Helvetica;
+    font-family: Roboto;
     font-size: 64px;
-
-    text-shadow: 0 0 8px black;
 
     /* prevent selection */
     -webkit-user-select: none;
@@ -63,6 +105,10 @@ button:focus {
     -ms-user-select: none;
     -o-user-select: none;
     user-select: none;
+
+    /* All of the children will have moving gradients */
+    -webkit-animation: MoveGradient 10s ease infinite;
+    animation: MoveGradient 10s ease infinite;
 }
 
 #levelMenu {
@@ -93,23 +139,49 @@ button:focus {
 
 .levelButton {
     min-width: 70px;
-    margin: 15px 15px;
+    margin: 15px;
 }
 
 #pauseMenu h1 {
-    color: aquamarine;
+    background: linear-gradient(245deg, #7cd2bc, #4687b1);
+    background-size: 400% 400%;
+
+    /*
+     The following code makes
+     the text coloured with the gradient.
+     background-clip is not inherited,
+     and so must be set per-header.
+    */
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
 }
 
 #gameOverMenu h1 {
-    color: firebrick;
+    background: linear-gradient(270deg, #da4118, #dc27d8, #e75e3a);
+    background-size: 600% 600%;
+
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
 }
 
 #winMenu h1 {
-    color: lawngreen;
+    background: linear-gradient(270deg, #7eeb70, #3acb50, #3fa41e);
+    background-size: 600% 600%;
+
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
 }
 
 #levelMenu h1 {
-    color: cadetblue;
+    background: linear-gradient(35deg, #56dcb9, #3dc2d4, #395cdc);
+    background-size: 600% 600%;
+
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
 }
 
 .selectLevelButton {
