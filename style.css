@@ -219,6 +219,7 @@ i.pause {
 
 button {
     padding: 15px;
+    color: black;
     font-size: 30px;
     font-family: Roboto;
     border: 2px solid black;
@@ -232,13 +233,18 @@ button {
 }
 
 button:hover {
-    background-color: rgba(255, 255, 255, 0.9);
+    background-color: rgba(255, 255, 255, 0.8);
     cursor: pointer;
 }
 
 button:focus {
     /* remove outline */
     outline: none;
+    color: black;
+}
+
+button:active {
+    background-color: rgba(255, 255, 255, 1.0);
 }
 
 .menu {
@@ -288,6 +294,7 @@ button:focus {
 
 #levelMenu > button {
     margin: 0 auto;
+    align-self: flex-start;
 }
 
 select {
@@ -309,14 +316,16 @@ select {
 }
 
 select:hover {
-	background-color: rgba(255, 255, 255, 0.9);
+	background-color: rgba(255, 255, 255, 0.8);
 }
 
 select:focus {
 	/* remove outline */
     outline: none;
+}
 
-	background-color: rgba(255, 255, 255, 1.0);
+select:active {
+    background-color: rgba(255, 255, 255, 1.0);
 }
 
 .infoText {
@@ -328,7 +337,7 @@ select:focus {
     background-size: 600% 600%;
 
     -webkit-background-clip: text;
-    background-clip: text;
+            background-clip: text;
     color: transparent;
 
 	-webkit-animation: MoveGradient 10s ease infinite;
@@ -346,7 +355,7 @@ select:focus {
 	font-size: 30px;
 
 	padding: 5px;
-	margin-top: 10px;
+	margin-top: 5px;
 	width: 100px;
 
 	-webkit-appearance: none;
@@ -359,7 +368,7 @@ select:focus {
 }
 
 #optionsMenu input[type=number]:hover {
-	background-color: rgba(255, 255, 255, 0.9);
+	background-color: rgba(255, 255, 255, 0.8);
 }
 
 #optionsMenu input[type=number]:focus {
