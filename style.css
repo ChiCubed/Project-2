@@ -1,5 +1,6 @@
 /* Fonts */
 @import url('https://fonts.googleapis.com/css?family=Roboto');
+@import url('https://fonts.googleapis.com/css?family=Roboto+Mono');
 
 /*
  Text gradients generated with the
@@ -28,15 +29,9 @@ body {
 	text-align: center;
 }
 
-#title {
-	font-family: Roboto;
-	font-size: 150px;
-
-	background: linear-gradient(270deg, #da4118, #dc27d8, #e75e3a, #7eeb70, #3acb50, #3fa41e, #56dcb9, #3dc2d4, #395cdc);
-    background-size: 1800% 1800%;
-
-    -webkit-background-clip: text;
-    background-clip: text;
+#title, h2, h3 {
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
     color: transparent;
 
 	-webkit-animation: MoveGradient 20s ease infinite;
@@ -47,6 +42,66 @@ body {
         -ms-user-select: none;
          -o-user-select: none;
             user-select: none;
+}
+
+#title, h2 {
+    background: linear-gradient(270deg, #da4118, #dc27d8, #e75e3a, #7eeb70, #3acb50, #3fa41e, #56dcb9, #3dc2d4, #395cdc);
+    background-size: 1800% 1800%;
+}
+
+h3 {
+    background: linear-gradient(270deg, #3acb50, #3fa41e, #56dcb9, #3dc2d4, #395cdc, #da4118, #dc27d8, #e75e3a, #7eeb70);
+    background-size: 1800% 1800%;
+}
+
+#title {
+    font-family: Roboto;
+    font-size: 150px;
+}
+
+h2 {
+    font-family: Roboto;
+    font-size: 80px;
+}
+
+h3 {
+    font-family: Roboto;
+    font-size: 50px;
+}
+p {
+    color: white;
+    font-family: Roboto;
+    font-size: 20px;
+}
+
+/* https://www.w3schools.com/howto/howto_css_arrows.asp */
+
+i.arrow {
+    border: solid white;
+    border-width: 0 5px 5px 0;
+    display: inline-block;
+    padding: 5px;
+    margin: 0px 3px;
+}
+
+.right {
+    -webkit-transform: rotate(-45deg);
+            transform: rotate(-45deg);
+}
+
+.left {
+    -webkit-transform: rotate(135deg);
+            transform: rotate(135deg);
+}
+
+.up {
+    -webkit-transform: rotate(-135deg);
+            transform: rotate(-135deg);
+}
+
+.down {
+    -webkit-transform: rotate(45deg);
+            transform: rotate(45deg);
 }
 
 #vertical-join, #container, #fps {
@@ -228,7 +283,7 @@ select {
 	-webkit-appearance: none;
 	   -moz-appearance: none;
             appearance: none;
-    background-image: url('icons/down.png');
+    background-image: url('images/down.png');
     background-size: contain;
     background-repeat: no-repeat;
     background-position: right;

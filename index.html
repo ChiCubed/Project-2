@@ -72,5 +72,38 @@
             </div>
         </div>
         <p id="fps">Not in game</p>
+
+        <!-- user documentation follows -->
+        <h2>How to Play</h2>
+        <h3>Controls</h3>
+        <p>Use the left and right keys on your keyboard (<i class="arrow left"></i> and <i class="arrow right"></i>) to move the player left and right.</p>
+        <p>Use the spacebar to fire a projectile.</p>
+        <p>A projectile will continue in the direction it was shot in until one of two things happens:</p>
+        <p>1. It hits an obstacle. This will cause the projectile to be destroyed, and possibly the obstacle, depending on the obstacle's type. When this occurs, the projectile will be available to you to shoot again.</p>
+        <p>2. It goes out of the player's view before it hits an obstacle. If this occurs you will receive the projectile again, allowing you to shoot again, after it goes out of view.</p>
+        <h3>Obstacles</h3>
+        <p>Obstacles have one of three shapes. Each of these are shown below.</p>
+        <img src="images/obstacle0.png" alt="Cube" width="320"/>
+        <img src="images/obstacle1.png" alt="Torus" width="320"/>
+        <img src="images/obstacle2.png" alt="Sphere" width="320"/>
+        <p>An obstacle that is <span style="color: lawngreen">green</span>, like those above, can be destroyed with projectiles.</p>
+        <p>An obstacle that is <span style="color: red">red</span>, like the one below, cannot be destroyed with projectiles.</p>
+        <img src="images/indestructible.png" alt="Indestructible cubes" width="320"/>
+        <h3>The goal</h3>
+        <p>The aim of each level is to reach the 'goal plane' at the end.</p>
+        <img src="images/goal.png" alt="Goal" width="320"/>
+        <h3>FPS Counter</h3>
+        <p>Just underneath the game screen there is a blue bar with text on it. This will be the FPS while you are in-game, and will display information otherwise.</p>
+        <img src="images/fps.png" alt="FPS Counter" width="640"/>
+        <h3>Options</h3>
+        <p>There are a number of options accessible from the level selection screen and the pause menu. (The pause menu may be accessed by selecting the pause button in the top-right corner of the game screen.) Below is a screenshot of these options.</p>
+        <img src="images/options.png" alt="Options" width="320"/>
+        <p>The 'Canvas Size' property allows you to change the resolution that the game is rendered at. Lowering this will improve performance if you have a slower device / GPU.</p>
+        <p>The 'Number of Physics Substeps' property indicates how many 'substeps' should be made when doing physics calculations. Essentially this ensures that the player / projectiles do not travel through obstacles without a colliision being detected. This option is only really important if you have a very low frame rate, in which case it is adviseable to turn down the Canvas Size property anyway. Generally, though, increasing this will make collisions more accurate.</p>
+        <p>The 'Screenshot size' property controls the width and height of screenshots. <span style="color: red">Warning:</span> Making the screenshot dimensions excessively large may cause your web browser to run out of memory, which will cause the game to crash.</p>
+        <h3>Screenshots</h3>
+        <p>Screenshots can be taken through the pause menu. As shown in the image below, the screenshot button is the lowest button in the pause menu.</p>
+        <img src="images/screenshot.png" alt="Screenshot button" width="320"/>
+        <p>Screenshot size can be changed through the options. Screenshots are automatically saved to your computer when this button is clicked, with the name <span style="font-family: 'Roboto Mono'">screenshot.png</span>.</p>
     </body>
 </html>
