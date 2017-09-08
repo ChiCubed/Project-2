@@ -104,6 +104,15 @@ i.arrow {
             transform: rotate(45deg);
 }
 
+i.pause {
+    width: 8px;
+    height: 16px;
+    border-right: 6px solid #000;
+    border-left: 6px solid #000;
+    padding-left: 4px;
+    padding-right: 4px;
+}
+
 #vertical-join, #container, #fps {
     background: linear-gradient(90deg, #5ee3c1, #4a81fe, #6d8ced);
     background-size: 600% 600%;
