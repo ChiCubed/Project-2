@@ -26,6 +26,8 @@ body {
     -webkit-animation: MoveGradient 15s ease infinite;
     animation: MoveGradient 15s ease infinite;
 
+    padding: 0px 10%;
+
 	text-align: center;
 }
 
