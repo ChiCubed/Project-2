@@ -149,7 +149,7 @@ float triangle(vec3 p, vec3 a, vec3 b, vec3 c) {
     }
 }
 
-
+// Distance function for the player
 float player(vec3 p) {
     float playerDist = min(
         triangle(p, pA, pB, pC),

@@ -1,4 +1,4 @@
-// Functions in the initialisation section of this program are adapted from:
+// Functions for WebGL initialisation are adapted from:
 // https://developer.mozilla.org/en/docs/Web/API/WebGL_API/Tutorial/Getting_started_with_WebGL
 // by Mozilla Contributors, licensed under CC-BY-SA 2.5.
 
@@ -288,7 +288,10 @@ var paused = false;
 var pauseTime;
 
 // whether or not a level preview
-// has been rendered yet
+// has been rendered yet.
+// we use this when we start a level
+// so that the canvas actually shows
+// what the level will look like.
 var hasRenderedPreview;
 
 
@@ -303,8 +306,8 @@ function shootProjectile() {
 
     originalProjectileSpeed = playerSpeed;
 
-    // the actual movement is done in the
-    // main render loop.
+    // the actual movement of the projectile
+    // is done in the main render loop.
 }
 
 // handlers for buttons
@@ -676,16 +679,31 @@ function changeScreenshotSize(w, h) {
 	gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, screenshotWidth, screenshotHeight, border, format, type, data);
 
 	/*
-	// This code is not really
-	// necessary.
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+	 // The following code is not really
+	 // necessary, since the
+     // texture is already linked to
+     // the framebuffer. All we want
+     // to do is change the texture size,
+     // and we've done that.
+	 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+	 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+	 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
-	gl.bindFramebuffer(gl.FRAMEBUFFER, screenshotFb);
+	 gl.bindFramebuffer(gl.FRAMEBUFFER, screenshotFb);
 
-	gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, screenshotTexture, level);
+	 gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, screenshotTexture, level);
 	*/
+}
+
+
+// sets canvas width / height
+function setCanvasSize(width, height) {
+    canvas.width = width;
+    canvas.height = height;
+	gl.viewport(0, 0, canvas.width, canvas.height);
+
+	// preview must be re-rendered
+	hasRenderedPreview = false;
 }
 
 
@@ -773,29 +791,12 @@ function shakeCanvas(time) {
 }
 
 
-// sets canvas width / height
-function setCanvasSize(width, height) {
-    canvas.width = width;
-    canvas.height = height;
-	gl.viewport(0, 0, canvas.width, canvas.height);
-
-	// preview must be re-rendered
-	hasRenderedPreview = false;
-}
-
-
-function levelLoader(levelID) {
-    // returns a function which will
-    // load the level levelID.
-    var loadLvl = function() { loadLevel(levelID); };
-    return loadLvl;
-}
-
-
 function addLevelButtons(levelMenuElem) {
     // This adds buttons to the
     // element defined by levelMenuElem,
-    // one for each level.
+    // one for each level. These buttons
+    // can be clicked by the user to send
+    // them to that level.
 
     // Firstly add a side-scrolling element
     // to hold the levels.
@@ -812,6 +813,41 @@ function addLevelButtons(levelMenuElem) {
     }
 
     levelMenuElem.appendChild(lvlBtnMenu);
+}
+
+
+function injectObstacleSceneData(fragment, obstacles) {
+    // We inject the data for the obstacles
+    // into the shader, so they are rendered.
+    var sceneObstacles = 'HitPoint obstacleHit = HitPoint(FAR_DIST, 0, 255);\n' +
+                         'HitPoint thisHit;';
+
+    for (var i = 0; i < obstacles.length; ++i) {
+        sceneObstacles += 'thisHit = obstacleDist'+obstacles[i].type+'(\n' +
+                          '    FAR_DIST * (1.0 - obstacleExists['+i+']) +\n' +
+                          '    obstacleInvRotation['+i+']*(p - obstaclePos['+i+']),\n' +
+                          '    ' + obstacles[i].mid + ',\n' +
+                          '    ' + i + '\n' +
+                          ');\n' +
+                          'obstacleHit = min(obstacleHit, thisHit);\n';
+    }
+
+    sceneObstacles += 'return obstacleHit;\n';
+
+    return fragment.replace('_PLACEHOLDER_FOR_OBSTACLE_SCENE_DATA', sceneObstacles);
+}
+
+
+// The following functions (up to line 1106)
+// change something about game state, e.g.
+// open a menu.
+
+
+function levelLoader(levelID) {
+    // returns a function which will
+    // load the level levelID.
+    var loadLvl = function() { loadLevel(levelID); };
+    return loadLvl;
 }
 
 
@@ -861,28 +897,6 @@ function openOptions(returnFunc, returnName) {
     winMenu.style.display = 'none';
     pauseButton.style.display = 'none';
     pauseMenu.style.display = 'none';
-}
-
-
-function injectObstacleSceneData(fragment, obstacles) {
-    // We inject the data for the obstacles
-    // into the GLSL.
-    var sceneObstacles = 'HitPoint obstacleHit = HitPoint(FAR_DIST, 0, 255);\n' +
-                         'HitPoint thisHit;';
-
-    for (var i = 0; i < obstacles.length; ++i) {
-        sceneObstacles += 'thisHit = obstacleDist'+obstacles[i].type+'(\n' +
-                          '    FAR_DIST * (1.0 - obstacleExists['+i+']) +\n' +
-                          '    obstacleInvRotation['+i+']*(p - obstaclePos['+i+']),\n' +
-                          '    ' + obstacles[i].mid + ',\n' +
-                          '    ' + i + '\n' +
-                          ');\n' +
-                          'obstacleHit = min(obstacleHit, thisHit);\n';
-    }
-
-    sceneObstacles += 'return obstacleHit;\n';
-
-    return fragment.replace('_PLACEHOLDER_FOR_OBSTACLE_SCENE_DATA', sceneObstacles);
 }
 
 
@@ -1149,10 +1163,17 @@ function moveLights() {
 }
 
 
+// This functions makes obstacles
+// move towards the player, and
+// returns true if any obstacles
+// were moved, otherwise false.
 function chasePlayer(chaseSpeed) {
     var anyMoved = false;
     for (var i = 0; i < obstacles.length; ++i) {
         if (obstacles[i].chasePlayer) {
+            // This obstacle is one that
+            // can move towards the player.
+
             anyMoved = true;
             // make obstacle move towards player
             obstacles[i].pos = mix3(obstacles[i].pos, playerPos, chaseSpeed);
@@ -1576,9 +1597,11 @@ function initGame() {
 	countdown = document.getElementById('countdown');
 
 	// set default number of physics substeps
+    // for the input on the options page
 	physicsSubstepsInput.value = NUM_PHYSICS_SUBSTEPS;
 
 	// set default screenshot size
+    // for the input on the options page
 	screenshotWInput.value = screenshotWidth;
 	screenshotHInput.value = screenshotHeight;
     
@@ -1586,6 +1609,10 @@ function initGame() {
     screenshotCanvas.width = screenshotWidth;
     screenshotCanvas.height = screenshotHeight;
 
+    // allows us to draw on the screenshot
+    // canvas, which in turn allows us to
+    // convert the drawn image to a png,
+    // which we can save locally.
     screenshotCtx = screenshotCanvas.getContext('2d');
 
     gl = initWebGL(canvas);
@@ -1600,7 +1627,7 @@ function initGame() {
     }
     
     // If the WebGL context is lost,
-    // we should reload.
+    // we should reload it.
     canvas.addEventListener(
         'webglcontextlost', handleContextLost, false
     );
@@ -1627,9 +1654,7 @@ function initGame() {
     // are most interested in,
     // since it will do most of the
     // rendering.
-    
-    // Load shader source.
-    
+
     // We use some XMLHttpRequests.
     // We do this asynchronously,
     // hence the nesting of
@@ -1637,7 +1662,9 @@ function initGame() {
     // The render loop handles the
     // case that the shader has not
     // yet compiled (i.e. the files
-    // have not yet been loaded).
+    // have not yet been loaded),
+    // with the line
+    // if (program === null).
     var vertReq = new XMLHttpRequest();
     vertReq.onload = function() {
         vertShaderSrc = this.response;
