@@ -219,7 +219,25 @@ var levels = [
         new Obstacle([2,2,-170],0.0,0,7,false,true),
         new Obstacle([-5,0.5,-170],1.57,0,6,true,true),
         new Obstacle([ 5,0.5,-170],1.57,0,7,false,true),
-    ], -200.0, 'Collapsing Structure')
+    ], -200.0, 'Collapsing Structure'),
+    new Level([
+        new Obstacle([-3.2,0,-100],0.0,0,6,true,false),
+        new Obstacle([-1.1,0,-100],0.0,0,7,false,false),
+        new Obstacle([ 1.1,0,-100],0.0,0,7,false,false),
+        new Obstacle([ 3.2,0,-100],0.0,0,7,false,false),
+        new Obstacle([-3.2,0,-130],0.0,0,7,false,false),
+        new Obstacle([-1.1,0,-130],0.0,0,6,true,false),
+        new Obstacle([ 1.1,0,-130],0.0,0,6,true,false),
+        new Obstacle([ 3.2,0,-130],0.0,0,7,false,false),
+        new Obstacle([-3.2,0,-160],0.0,0,7,false,false),
+        new Obstacle([-1.1,0,-160],0.0,0,7,false,false),
+        new Obstacle([ 1.1,0,-160],0.0,0,6,true,false),
+        new Obstacle([ 3.2,0,-160],0.0,0,6,true,false),
+        new Obstacle([-3.2,0,-190],0.0,0,7,false,false),
+        new Obstacle([-1.1,0,-190],0.0,0,7,false,false),
+        new Obstacle([ 1.1,0,-190],0.0,0,7,false,false),
+        new Obstacle([ 3.2,0,-190],0.0,0,6,true,false),
+    ], -400.0, 'Maze')
 ];
 
 
