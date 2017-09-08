@@ -26,9 +26,11 @@ body {
     -webkit-animation: MoveGradient 15s ease infinite;
     animation: MoveGradient 15s ease infinite;
 
-    padding: 0px 10%;
-
 	text-align: center;
+}
+
+#title, p {
+    padding: 0px 10%;
 }
 
 #title, h2, h3 {
@@ -154,9 +156,12 @@ i.pause {
     position: relative;
 	overflow: hidden;
 
+    width: 640px;
+    height: 480px;
+
     margin: 30px auto;
-    width: 680px;
-    height: 520px;
+
+    padding: 20px;
 
     border-radius: 25px;
 
@@ -167,7 +172,8 @@ i.pause {
     font-family: Roboto;
     text-align: center;
 
-	width: 660px;
+    width: 660px;
+
 	margin: auto;
 
 	padding: 10px;
@@ -179,7 +185,7 @@ i.pause {
     position: relative;
     overflow: hidden;
     border-radius: 15px;
-    margin: 20px auto;
+    margin: 0px auto;
     width: 640px;
     height: 480px;
 }
