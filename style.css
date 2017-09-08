@@ -17,16 +17,50 @@
     100% {background-position:0% 50%}
 }
 
+body {
+	/* moving background */
+    background: linear-gradient(270deg, #0e0c2e, #03112e, #0d0c28);
+    background-size: 600% 600%;
+
+    -webkit-animation: MoveGradient 15s ease infinite;
+    animation: MoveGradient 15s ease infinite;
+
+	text-align: center;
+}
+
+#title {
+	font-family: Roboto;
+	font-size: 150px;
+
+	background: linear-gradient(270deg, #da4118, #dc27d8, #e75e3a, #7eeb70, #3acb50, #3fa41e, #56dcb9, #3dc2d4, #395cdc);
+    background-size: 1800% 1800%;
+
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+
+	-webkit-animation: MoveGradient 20s ease infinite;
+    animation: MoveGradient 20s ease infinite;
+
+	-webkit-user-select: none;
+       -moz-user-select: none;
+        -ms-user-select: none;
+         -o-user-select: none;
+            user-select: none;
+}
+
 #container {
     position: relative;
-    overflow: hidden;
+	overflow: hidden;
     border-radius: 25px;
     margin: 30px auto;
     width: 680px;
     height: 520px;
 
+	border: none;
+
     /* add a nice moving background */
-    background: linear-gradient(135deg, #5ee3c1, #2a61de, #0d2c48);
+    background: linear-gradient(90deg, #5ee3c1, #2a61de, #0d2c48);
     background-size: 600% 600%;
 
     -webkit-animation: MoveGradient 10s ease infinite;
@@ -47,9 +81,57 @@
     width: 100%;
 }
 
+#countdown {
+	position: absolute;
+	top: 0px;
+	margin-top: 100px;
+	width: 100%;
+	font-family: Roboto;
+	text-align: center;
+	font-size: 150px;
+	color: red;
+
+	 /* prevent selection */
+    -webkit-user-select: none;
+       -moz-user-select: none;
+        -ms-user-select: none;
+         -o-user-select: none;
+            user-select: none;
+
+	background: linear-gradient(75deg, #3de2d4, #395edc, #56deb9);
+    background-size: 600% 600%;
+
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+
+	-webkit-animation: MoveGradient 10s ease infinite;
+    animation: MoveGradient 10s ease infinite;
+}
+
 #fps {
     font-family: Roboto;
     text-align: center;
+
+	width: 660px;
+	margin: auto;
+
+	padding: 10px;
+
+	background: linear-gradient(90deg, #5ee3c1, #4a81fe, #6d8ced);
+    background-size: 600% 600%;
+
+	border-radius: 25px;
+
+	-webkit-animation: MoveGradient 10s ease infinite;
+    animation: MoveGradient 10s ease infinite;
+
+	/* prevent selection */
+    -webkit-user-select: none;
+       -moz-user-select: none;
+        -ms-user-select: none;
+         -o-user-select: none;
+            user-select: none;
 }
 
 button {
@@ -60,10 +142,10 @@ button {
     background-color: rgba(255, 255, 255, 0.6);
     /* prevent selection */
     -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    -o-user-select: none;
-    user-select: none;
+       -moz-user-select: none;
+        -ms-user-select: none;
+         -o-user-select: none;
+            user-select: none;
 }
 
 button:hover {
@@ -101,10 +183,10 @@ button:focus {
 
     /* prevent selection */
     -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    -o-user-select: none;
-    user-select: none;
+       -moz-user-select: none;
+        -ms-user-select: none;
+         -o-user-select: none;
+            user-select: none;
 
     /* All of the children will have moving gradients */
     -webkit-animation: MoveGradient 10s ease infinite;
@@ -119,6 +201,83 @@ button:focus {
     */
     display: flex;
     flex-direction: column;
+}
+
+select {
+	margin-top: 10px;
+	font-family: Roboto;
+	font-size: 30px;
+
+	-webkit-appearance: none;
+	   -moz-appearance: none;
+            appearance: none;
+    background-image: url('icons/down.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: right;
+    padding: 10px 56px 10px 10px;
+    border: 2px solid black;
+
+	background-color: rgba(255, 255, 255, 0.6);
+}
+
+select:hover {
+	background-color: rgba(255, 255, 255, 0.9);
+}
+
+select:focus {
+	/* remove outline */
+    outline: none;
+
+	background-color: rgba(255, 255, 255, 1.0);
+}
+
+.infoText {
+	font-family: Roboto;
+	font-size: 30px;
+
+	/* colour effect */
+	background: linear-gradient(75deg, #3de2d4, #395edc, #56deb9);
+    background-size: 600% 600%;
+
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+
+	-webkit-animation: MoveGradient 10s ease infinite;
+    animation: MoveGradient 10s ease infinite;
+
+	-webkit-user-select: none;
+       -moz-user-select: none;
+        -ms-user-select: none;
+         -o-user-select: none;
+            user-select: none;
+}
+
+#optionsMenu input[type=number] {
+	font-family: Roboto;
+	font-size: 30px;
+
+	padding: 5px;
+	margin-top: 10px;
+	width: 100px;
+
+	-webkit-appearance: none;
+	   -moz-appearance: none;
+		    appearance: none;
+
+	border: 2px solid black;
+
+	background-color: rgba(255, 255, 255, 0.6);
+}
+
+#optionsMenu input[type=number]:hover {
+	background-color: rgba(255, 255, 255, 0.9);
+}
+
+#optionsMenu input[type=number]:focus {
+	outline: none;
+	background-color: rgba(255, 255, 255, 1.0);
 }
 
 .levelSelectionMenu {
@@ -175,7 +334,7 @@ button:focus {
     color: transparent;
 }
 
-#levelMenu h1 {
+#levelMenu h1, #optionsMenu h1 {
     background: linear-gradient(35deg, #56dcb9, #3dc2d4, #395cdc);
     background-size: 600% 600%;
 

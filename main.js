@@ -5,11 +5,12 @@
 var canvas; // The canvas element.
 var screenshotCanvas; // Screenshot canvas element.
 var screenshotCtx; // Screenshot 2d context.
+var screenshotTexture; // Screenshot texture.
 var screenshotFb; // Screenshot framebuffer.
 // screenshot width / height
-var screenshotWidth = 3840;
-var screenshotHeight = 2160;
-var screenshotData = new Uint8Array(4 * screenshotWidth * screenshotHeight);
+var screenshotWidth = 1920;
+var screenshotHeight = 1080;
+var screenshotData;
 var container; // Container for canvas + pause button.
 var gl; // The WebGL context.
 var verticesBuffer; // Vertex Buffer Object.
@@ -124,6 +125,10 @@ var collisionTexture;
 var collisionFramebuffer;
 
 var NUM_PHYSICS_SUBSTEPS = 8;
+
+// Countdown duration before
+// level start, in MS.
+var COUNTDOWN_DURATION = 3000;
 
 var MAX_NUM_LIGHTS = 32;
 var MAX_NUM_DIRECTIONAL_LIGHTS = 32;
@@ -259,6 +264,14 @@ var winMenu;
 var levelMenu;
 var pauseButton;
 var pauseMenu;
+var optionsMenu;
+
+var optionsBackButton;
+var physicsSubstepsInput;
+var screenshotWInput;
+var screenshotHInput;
+
+var countdown;
 
 // for shaking the canvas
 var shakeFramesLeft;
@@ -270,6 +283,10 @@ var shakeMagnitudeDelta;
 var gamePlaying = false;
 var paused = false;
 var pauseTime;
+
+// whether or not a level preview
+// has been rendered yet
+var hasRenderedPreview;
 
 
 function random(min, max) {
@@ -291,13 +308,16 @@ function shootProjectile() {
 function keyDownHandler(e) {
 	if (e.keyCode == 37) {
 		leftPressed = true;
+		e.preventDefault();
 	} else if (e.keyCode == 39) {
 		rightPressed = true;
+		e.preventDefault();
 	} else if (e.keyCode == 32) {
         // spacebar - shoot projectile
         if (!projectileExists) {
             shootProjectile();
         }
+		e.preventDefault();
     }
 }
 
@@ -608,7 +628,7 @@ function setupWebGLState() {
 
 
     // Now for the screenshot texture!
-    var screenshotTexture = gl.createTexture();
+    screenshotTexture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, screenshotTexture);
 
 	gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, screenshotWidth, screenshotHeight, border, format, type, data);
@@ -616,6 +636,9 @@ function setupWebGLState() {
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+	// to store pixels
+	screenshotData = new Uint8Array(4 * screenshotWidth * screenshotHeight);
 
 	screenshotFb = gl.createFramebuffer();
 	gl.bindFramebuffer(gl.FRAMEBUFFER, screenshotFb);
@@ -626,6 +649,40 @@ function setupWebGLState() {
     // The reason we can't just get the program attribute locations now is that
     // the program is dynamically generated for each level that we play, and
     // therefore will not exist when this function is called.
+}
+
+
+function changeScreenshotSize(w, h) {
+	screenshotWidth = w;
+	screenshotHeight = h;
+	screenshotCanvas.width = w;
+	screenshotCanvas.height = h;
+
+	var level = 0;
+	var internalFormat = gl.RGBA;
+	var border = 0;
+	var format = gl.RGBA;
+	var type = gl.UNSIGNED_BYTE;
+	var data = null;
+
+	// to store pixels
+	screenshotData = new Uint8Array(4 * screenshotWidth * screenshotHeight);
+
+	gl.bindTexture(gl.TEXTURE_2D, screenshotTexture);
+
+	gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, screenshotWidth, screenshotHeight, border, format, type, data);
+
+	/*
+	// This code is not really
+	// necessary.
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+	gl.bindFramebuffer(gl.FRAMEBUFFER, screenshotFb);
+
+	gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, screenshotTexture, level);
+	*/
 }
 
 
@@ -717,6 +774,10 @@ function shakeCanvas(time) {
 function setCanvasSize(width, height) {
     canvas.width = width;
     canvas.height = height;
+	gl.viewport(0, 0, canvas.width, canvas.height);
+
+	// preview must be re-rendered
+	hasRenderedPreview = false;
 }
 
 
@@ -764,10 +825,40 @@ function selectLevel() {
     levelMenu.style.display = '';
 
     // make other menus invisible
+	optionsMenu.style.display = 'none';
     gameOverMenu.style.display = 'none';
     winMenu.style.display = 'none';
     pauseButton.style.display = 'none';
     pauseMenu.style.display = 'none';
+
+	countdown.style.display = 'none';
+}
+
+
+function openOptions(returnFunc, returnName) {
+	// returnFunc and returnName
+	// are the function to call and the
+	// name of the menu which we came
+	// to the options menu through.
+
+	// set the return button based on this
+	optionsBackButton.innerHTML = 'Back to '+returnName;
+	optionsBackButton.onclick = returnFunc;
+
+	// just in case game still going
+	cancelAnimationFrame(requestId);
+
+	// draw menu
+	optionsMenu.style.display = '';
+
+	// make other menus invisible
+	levelMenu.style.display = 'none';
+    gameOverMenu.style.display = 'none';
+    winMenu.style.display = 'none';
+    pauseButton.style.display = 'none';
+    pauseMenu.style.display = 'none';
+
+	countdown.style.display = 'none';
 }
 
 
@@ -799,6 +890,8 @@ function injectObstacleSceneData(fragment, obstacles) {
 // obstacles for the current scene,
 // and starts the game.
 function loadLevel(levelID) {
+	fpsElement.innerHTML = 'Loading game';
+
     // We don't want to load the level
     // if we're mid-game!
     if (gamePlaying) return;
@@ -829,10 +922,14 @@ function loseGame() {
 
     winMenu.style.display = 'none';
     levelMenu.style.display = 'none';
+	optionsMenu.style.display = 'none';
 
     // hide pause button
     pauseButton.style.display = 'none';
     pauseMenu.style.display = 'none';
+
+	countdown.style.display = 'none';
+	fpsElement.innerHTML = 'Not in game';
 
     // Make canvas shake
     shakeFramesLeft = 15;
@@ -853,9 +950,13 @@ function winGame() {
 
     gameOverMenu.style.display = 'none';
     levelMenu.style.display = 'none';
+	optionsMenu.style.display = 'none';
 
     pauseButton.style.display = 'none';
     pauseMenu.style.display = 'none';
+
+	countdown.style.display = 'none';
+	fpsElement.innerHTML = 'Not in game';
 
     // Make canvas shake
     shakeFramesLeft = 15;
@@ -872,13 +973,17 @@ function startGame() {
     if (!gamePlaying) {
         startTime = performance.now();
         lastFrameTime = startTime;
+		startTime += COUNTDOWN_DURATION;
 
         gamePlaying = true;
         paused = false;
 
+		hasRenderedPreview = false;
+
         // reset vars
         playerPos = [0.0, 0.0, 0.0];
         playerSpeed = 1.0;
+		playerRotation = 0.0;
         projectileExists = false;
         // Create a copy of the obstacles
         // We have to make a deep copy so we don't
@@ -900,6 +1005,10 @@ function startGame() {
         gameOverMenu.style.display = 'none';
         winMenu.style.display = 'none';
         levelMenu.style.display = 'none';
+		optionsMenu.style.display = 'none';
+
+		countdown.style.display = '';
+		fpsElement.innerHTML = 'Starting game';
 
         // reset container position
         container.style.transform = 'translate(0px, 0px)';
@@ -926,6 +1035,7 @@ function startGame() {
         gameOverMenu.style.display = 'none';
         winMenu.style.display = 'none';
         levelMenu.style.display = 'none';
+		optionsMenu.style.display = 'none';
 
         container.style.transform = 'translate(0px, 0px)';
 
@@ -935,16 +1045,21 @@ function startGame() {
 
 
 function pauseGame() {
-    if (!gamePlaying || paused) {
-        // We're not actually in-game
-        // or the game is already paused.
+    if (!gamePlaying) {
+        // We're not actually in-game.
         return;
     }
     // stop rendering
     cancelAnimationFrame(requestId);
 
-    pauseTime = performance.now();
-    paused = true;
+	// We only set the pause time the first
+	// time we pause the game. Subsequent times
+	// (e.g. by going back from the options menu)
+	// will not change the pause time.
+	if (!paused) {
+		pauseTime = performance.now();
+		paused = true;
+	}
 
     pauseButton.style.display = 'none';
     pauseMenu.style.display = '';
@@ -953,6 +1068,7 @@ function pauseGame() {
     gameOverMenu.style.display = 'none';
     winMenu.style.display = 'none';
     levelMenu.style.display = 'none';
+	optionsMenu.style.display = 'none';
 }
 
 
@@ -1037,6 +1153,8 @@ function render(time) {
         return;
     }
 
+	// temporary rotation matrices
+	var m, pm;
 
     // setup the browser for the
 	// next frame
@@ -1049,6 +1167,71 @@ function render(time) {
 
 	var deltaTime = time - lastFrameTime;
 	var currentTime = time - startTime;
+
+	// If we're in the countdown and
+	// we haven't rendered the preview yet
+	if (currentTime < 0 && !hasRenderedPreview) {
+		// Render a level preview.
+		// Comments are basically all removed
+		// here for conciseness.
+		gl.useProgram(program);
+
+		gl.uniform2f(screenSizeUniform, canvas.width, canvas.height);
+		gl.uniform1f(timeUniform,0.0);
+
+		materials[1].diffuse = [0.35,0.25,0.7];
+
+		moveLights();
+		setLightUniforms(lights);
+		setDirectionalLightUniforms(directionalLights);
+		setMaterialUniforms(materials);
+		setObstacleUniforms(obstacles);
+
+		m = mult3(mult3(rotateY(angle[0]), rotateX(angle[1])), rotateZ(angle[2]));
+		m = trans3(m);
+
+		gl.uniformMatrix3fv(viewToWorldUniform, false, new Float32Array(m));
+
+		gl.uniform1f(winPositionUniform, winPosition);
+
+		pm = rotateZ(playerRotation);
+		gl.uniformMatrix3fv(invPlayerRotationUniform, false, new Float32Array(pm));
+
+		gl.uniform3fv(playerPosUniform, new Float32Array(playerPos));
+
+		gl.uniform1f(projectileExistsUniform, projectileExists);
+		if (projectileExists) {
+			gl.uniform3fv(projectilePosUniform, new Float32Array(projectilePos));
+		}
+
+        cameraPos[1] = playerPos[1] + 4.5;
+        cameraPos[2] = playerPos[2] + 20.0;
+		gl.uniform3fv(cameraPosUniform, new Float32Array(cameraPos));
+
+		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+		gl.clearColor(0.0, 0.0, 0.0, 1.0);
+		gl.clear(gl.COLOR_BUFFER_BIT);
+		gl.uniform1f(isCollisionDetectionUniform, false);
+
+		gl.drawArrays(gl.TRIANGLES, 0, 6);
+		gl.finish();
+	}
+
+	hasRenderedPreview = true;
+
+	if (currentTime < 0) {
+		// During countdown
+		countdown.innerHTML = Math.min(-Math.floor(currentTime / 1000), Math.floor(COUNTDOWN_DURATION / 1000));
+
+		lastFrameTime = time;
+		return;
+	} else if (currentTime < 1000) {
+		// Display the word 'Go'
+		countdown.innerHTML = 'GO';
+	} else {
+		countdown.style.display = 'none';
+	}
 
     // Update the scene
     var isMovingRight = (rightPressed && !leftPressed);
@@ -1091,7 +1274,7 @@ function render(time) {
     // We need to calculate the rotation matrix from
     // view to world.
     // First get the transformation matrix.
-    var m = mult3(mult3(rotateY(angle[0]), rotateX(angle[1])), rotateZ(angle[2]));
+    m = mult3(mult3(rotateY(angle[0]), rotateX(angle[1])), rotateZ(angle[2]));
     // We transpose the matrix to make WebGL happy.
     m = trans3(m);
     // Now set the uniform.
@@ -1147,7 +1330,7 @@ function render(time) {
 
 		// We calculate the rotation matrix for player rotation.
 		// First calculate the transformation matrix.
-		var pm = rotateZ(playerRotation);
+		pm = rotateZ(playerRotation);
 
 		// We should transpose it here to
 		// ensure the data is in the correct
@@ -1232,6 +1415,7 @@ function render(time) {
 			// Player collision: you lose!
 			if (collisionData[0] != obstacleToRemove) {
 				loseGame();
+				break;
 			}
 		}
 
@@ -1343,7 +1527,9 @@ function takeScreenshot() {
 function handleContextLost(event) {
     event.preventDefault();
     console.log('The WebGL context was lost.');
-    cancelAnimationFrame(requestId);
+    if (gamePlaying) {
+		pauseGame();
+	}
 }
 
 
@@ -1356,7 +1542,20 @@ function initGame() {
     winMenu = document.getElementById('winMenu');
     pauseButton = document.getElementById('pause');
     pauseMenu = document.getElementById('pauseMenu');
+	optionsMenu = document.getElementById('optionsMenu');
     fpsElement = document.getElementById('fps');
+	physicsSubstepsInput = document.getElementById('numPhysicsSubsteps');
+	optionsBackButton = document.getElementById('returnButton');
+	screenshotWInput = document.getElementById('screenshotW');
+	screenshotHInput = document.getElementById('screenshotH');
+	countdown = document.getElementById('countdown');
+
+	// set default number of physics substeps
+	physicsSubstepsInput.value = NUM_PHYSICS_SUBSTEPS;
+
+	// set default screenshot size
+	screenshotWInput.value = screenshotWidth;
+	screenshotHInput.value = screenshotHeight;
     
     // set screenshot canvas size
     screenshotCanvas.width = screenshotWidth;

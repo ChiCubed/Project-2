@@ -10,15 +10,19 @@
       start the game as soon as the page loads
     -->
     <body onload="initGame()">
+		<h1 id="title">Project 2</h1>
         <canvas id="screenshot-canvas" style="display: none"></canvas>
         <div id="container">
             <div id="inner-container">
                 <!-- The main canvas element. -->
                 <canvas id="canvas" width="640px" height="480px"></canvas>
+				<!-- Countdown timer for level start -->
+				<h1 id="countdown" style="display: none"></h1>
                 <!-- Pause button icon -->
                 <button id="pause" onclick="pauseGame()">&#9616;&nbsp;&#9612;</button>
                 <div id="pauseMenu" class="menu" style="display: none">
                     <h1>Paused</h1>
+					<button onclick="openOptions(pauseGame, 'Pause Menu')">Options</button>
                     <button id="resume" onclick="startGame()">Resume Game</button><br>
                     <button class="selectLevelButton" onclick="selectLevel()">Return to Level Select</button><br>
                     <button onclick="takeScreenshot()">Take Screenshot</button>
@@ -26,7 +30,26 @@
                 <!-- Level select menu -->
                 <div id="levelMenu" class="menu" style="display: none">
                     <h1>Select Level</h1>
+					<button onclick="openOptions(selectLevel, 'Level Select')">Options</button><br>
                 </div>
+				<!-- Options menu -->
+				<div id="optionsMenu" class="menu" style="display: none">
+					<h1>Options</h1>
+					<button id="returnButton"></button><br>
+					<span class="infoText">Canvas Size: </span>
+					<select onchange="var x=this.options[this.selectedIndex].value.split('x');setCanvasSize(Number(x[0]), Number(x[1]))">
+						<option value="640x480" selected>640 by 480</option>
+						<option value="480x360">480 by 360</option>
+						<option value="160x120">160 by 120</option>
+						<option value="120x90">120 by 90</option>
+					</select><br>
+					<span class="infoText">Number of Physics Substeps: </span>
+					<input type="number" id="numPhysicsSubsteps" onchange="this.value = Math.floor(Number(this.value)); NUM_PHYSICS_SUBSTEPS = this.value; if(NUM_PHYSICS_SUBSTEPS < 1) { this.value = 1; NUM_PHYSICS_SUBSTEPS = this.value }"/><br>
+					<span class="infoText">Screenshot size: </span>
+					<input type="number" id="screenshotW" onchange="this.value = Math.floor(Number(this.value)); if(this.value < 1) { this.value = 1; } changeScreenshotSize(this.value, screenshotHeight)"/>
+					<span class="infoText"> by </span>
+					<input type="number" id="screenshotH" onchange="this.value = Math.floor(Number(this.value)); if(this.value < 1) { this.value = 1; } changeScreenshotSize(screenshotWidth, this.value)"/><br>
+				</div>
                 <!-- Menu for when the player loses.
                      Hidden by default. -->
                 <div id="gameOverMenu" class="menu" style="display: none">
@@ -42,6 +65,6 @@
                 </div>
             </div>
         </div>
-        <p id="fps"></p>
+        <p id="fps">Not in game</p>
     </body>
 </html>
