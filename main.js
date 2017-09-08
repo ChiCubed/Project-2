@@ -780,11 +780,12 @@ function shakeCanvas(time) {
     shakeMagnitude += shakeMagnitudeDelta;
 
     var randX = random(-shakeMagnitude, shakeMagnitude);
-    var randY = random(-shakeMagnitude, shakeMagnitude);
+    var randY = random(-shakeMagnitude * 0.5, shakeMagnitude * 0.5);
+    var randRot = random(-shakeMagnitude * 0.1, shakeMagnitude * 0.1);
 
-    // Javascript will automatically make randX and randY
+    // Javascript will automatically make randX, randY and randRot
     // strings for us.
-    container.style.transform = 'translate(' + randX + 'px, ' + randY + 'px)';
+    container.style.transform = 'rotate(' + randRot + 'deg) translate(' + randX + 'px, ' + randY + 'px)';
 
     shakeFramesLeft--;
     requestAnimationFrame(shakeCanvas);
@@ -1504,11 +1505,12 @@ function render(time) {
     // vibrate the canvas.
     if (playerPos[2] <= winPosition + 50 && playerPos[2] > winPosition) {
         var mag = (50 - (playerPos[2] - winPosition)) * 0.6;
-        var randX = random(-mag, mag);
+        var randX = random(-mag * 0.4, mag * 0.4);
         // we want the random Y movement to be less
-        var randY = random(-mag * 0.2, mag * 0.2);
+        var randY = random(-mag * 0.1, mag * 0.1);
+        var randRot = random(-mag * 0.03, mag * 0.03);
 
-        container.style.transform = 'translate(' + randX + 'px, ' + randY + 'px)';
+        container.style.transform = 'rotate(' + randRot + 'deg) translate(' + randX + 'px, ' + randY + 'px)';
     }
 
     // Now we do FPS calculation.
