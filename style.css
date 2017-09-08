@@ -286,6 +286,10 @@ button:focus {
     flex-direction: column;
 }
 
+#levelMenu > button {
+    margin: 0 auto;
+}
+
 select {
 	margin-top: 10px;
 	font-family: Roboto;
