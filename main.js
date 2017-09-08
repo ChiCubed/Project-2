@@ -16,6 +16,9 @@ var gl; // The WebGL context.
 var verticesBuffer; // Vertex Buffer Object.
 var program = null; // WebGL shader program.
 
+// A debug variable.
+var FIX_LATE_COUNTDOWN = true;
+
 // These store binding points for
 // the uniforms.
 var screenSizeUniform;
@@ -832,6 +835,7 @@ function selectLevel() {
     pauseMenu.style.display = 'none';
 
 	countdown.style.display = 'none';
+    fpsElement.innerHTML = 'Not in game';
 }
 
 
@@ -857,8 +861,6 @@ function openOptions(returnFunc, returnName) {
     winMenu.style.display = 'none';
     pauseButton.style.display = 'none';
     pauseMenu.style.display = 'none';
-
-	countdown.style.display = 'none';
 }
 
 
@@ -890,7 +892,7 @@ function injectObstacleSceneData(fragment, obstacles) {
 // obstacles for the current scene,
 // and starts the game.
 function loadLevel(levelID) {
-	fpsElement.innerHTML = 'Loading game';
+	fpsElement.innerHTML = 'Loading level';
 
     // We don't want to load the level
     // if we're mid-game!
@@ -905,7 +907,11 @@ function loadLevel(levelID) {
     getProgramAttribLocations();
 
     // start the level
-    startGame();
+    // We use setTimeout to ensure
+    // the browser has time to update
+    // the fps counter's text to
+    // "Loading game".
+    setTimeout(startGame, 15);
 }
 
 
@@ -929,7 +935,10 @@ function loseGame() {
     pauseMenu.style.display = 'none';
 
 	countdown.style.display = 'none';
-	fpsElement.innerHTML = 'Not in game';
+    // After a short delay update the FPS counter
+	setTimeout(function() {
+        fpsElement.innerHTML = 'Level failed';
+    }, 15);
 
     // Make canvas shake
     shakeFramesLeft = 15;
@@ -956,7 +965,9 @@ function winGame() {
     pauseMenu.style.display = 'none';
 
 	countdown.style.display = 'none';
-	fpsElement.innerHTML = 'Not in game';
+	setTimeout(function() {
+        fpsElement.innerHTML = 'Level complete';
+    }, 15);
 
     // Make canvas shake
     shakeFramesLeft = 15;
@@ -1007,13 +1018,18 @@ function startGame() {
         levelMenu.style.display = 'none';
 		optionsMenu.style.display = 'none';
 
-		countdown.style.display = '';
+        countdown.style.display = '';
+
 		fpsElement.innerHTML = 'Starting game';
 
         // reset container position
         container.style.transform = 'translate(0px, 0px)';
 
-        requestId = requestAnimationFrame(render, canvas);
+        if (FIX_LATE_COUNTDOWN) {
+            render(performance.now());
+        } else {
+            requestId = requestAnimationFrame(render, canvas);
+        }
     } else if (paused) {
         // We just resume the render loop.
         // First, account for the time that the
@@ -1039,7 +1055,11 @@ function startGame() {
 
         container.style.transform = 'translate(0px, 0px)';
 
-        requestId = requestAnimationFrame(render, canvas);
+        if (FIX_LATE_COUNTDOWN) {
+            render(performance.now());
+        } else {
+            requestId = requestAnimationFrame(render, canvas);
+        }
     }
 }
 
@@ -1223,12 +1243,17 @@ function render(time) {
 	if (currentTime < 0) {
 		// During countdown
 		countdown.innerHTML = Math.min(-Math.floor(currentTime / 1000), Math.floor(COUNTDOWN_DURATION / 1000));
+        countdown.style.opacity = 1.0;
 
 		lastFrameTime = time;
+
+        fpsElement.innerHTML = 'Starting game';
+
 		return;
 	} else if (currentTime < 1000) {
 		// Display the word 'Go'
 		countdown.innerHTML = 'GO';
+        countdown.style.opacity = (1.0 - currentTime / 1000);
 	} else {
 		countdown.style.display = 'none';
 	}

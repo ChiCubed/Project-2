@@ -49,22 +49,64 @@ body {
             user-select: none;
 }
 
+#vertical-join, #container, #fps {
+    background: linear-gradient(90deg, #5ee3c1, #4a81fe, #6d8ced);
+    background-size: 600% 600%;
+    /* this means the backgrounds will be aligned */
+    background-attachment: fixed;
+
+    -webkit-animation: MoveGradient 10s ease infinite;
+    animation: MoveGradient 10s ease infinite;
+
+    /* prevent selection */
+    -webkit-user-select: none;
+       -moz-user-select: none;
+        -ms-user-select: none;
+         -o-user-select: none;
+            user-select: none;
+}
+
+#vertical-join {
+    position: relative;
+
+    top: 280px;
+    width: 30px;
+    height: 300px;
+    margin: 0px auto;
+    margin-bottom: -330px;
+
+    /*
+     Ensure the join is behind both the
+     'screen' and the FPS counter
+    */
+    z-index: -1;
+
+    border-radius: 10px;
+}
+
 #container {
     position: relative;
 	overflow: hidden;
-    border-radius: 25px;
+
     margin: 30px auto;
     width: 680px;
     height: 520px;
 
+    border-radius: 25px;
+
 	border: none;
+}
 
-    /* add a nice moving background */
-    background: linear-gradient(90deg, #5ee3c1, #2a61de, #0d2c48);
-    background-size: 600% 600%;
+#fps {
+    font-family: Roboto;
+    text-align: center;
 
-    -webkit-animation: MoveGradient 10s ease infinite;
-    animation: MoveGradient 10s ease infinite;
+	width: 660px;
+	margin: auto;
+
+	padding: 10px;
+
+	border-radius: 10px;
 }
 
 #inner-container {
@@ -107,31 +149,6 @@ body {
 
 	-webkit-animation: MoveGradient 10s ease infinite;
     animation: MoveGradient 10s ease infinite;
-}
-
-#fps {
-    font-family: Roboto;
-    text-align: center;
-
-	width: 660px;
-	margin: auto;
-
-	padding: 10px;
-
-	background: linear-gradient(90deg, #5ee3c1, #4a81fe, #6d8ced);
-    background-size: 600% 600%;
-
-	border-radius: 25px;
-
-	-webkit-animation: MoveGradient 10s ease infinite;
-    animation: MoveGradient 10s ease infinite;
-
-	/* prevent selection */
-    -webkit-user-select: none;
-       -moz-user-select: none;
-        -ms-user-select: none;
-         -o-user-select: none;
-            user-select: none;
 }
 
 button {

@@ -4,6 +4,7 @@
     <head>
         <script type="text/javascript" src="main.js"></script>
         <link rel="stylesheet" type="text/css" href="style.css"/>
+        <title>Project 2</title>
     </head>
     <!--
       onload attribute allows us to
@@ -11,11 +12,16 @@
     -->
     <body onload="initGame()">
 		<h1 id="title">Project 2</h1>
+        <!--
+          This gives the appearance of the
+          canvas being joined to the FPS counter.
+        -->
+        <div id="vertical-join"></div>
         <canvas id="screenshot-canvas" style="display: none"></canvas>
         <div id="container">
             <div id="inner-container">
                 <!-- The main canvas element. -->
-                <canvas id="canvas" width="640px" height="480px"></canvas>
+                <canvas id="canvas" width="640" height="480"></canvas>
 				<!-- Countdown timer for level start -->
 				<h1 id="countdown" style="display: none"></h1>
                 <!-- Pause button icon -->
@@ -44,7 +50,7 @@
 						<option value="120x90">120 by 90</option>
 					</select><br>
 					<span class="infoText">Number of Physics Substeps: </span>
-					<input type="number" id="numPhysicsSubsteps" onchange="this.value = Math.floor(Number(this.value)); NUM_PHYSICS_SUBSTEPS = this.value; if(NUM_PHYSICS_SUBSTEPS < 1) { this.value = 1; NUM_PHYSICS_SUBSTEPS = this.value }"/><br>
+					<input type="number" id="numPhysicsSubsteps" onchange="this.value = Math.floor(Number(this.value)); if(this.value < 1) { this.value = 1; } NUM_PHYSICS_SUBSTEPS = this.value;"/><br>
 					<span class="infoText">Screenshot size: </span>
 					<input type="number" id="screenshotW" onchange="this.value = Math.floor(Number(this.value)); if(this.value < 1) { this.value = 1; } changeScreenshotSize(this.value, screenshotHeight)"/>
 					<span class="infoText"> by </span>
