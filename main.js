@@ -1015,10 +1015,6 @@ function startGame() {
 	// If already playing (but is paused),
 	// resumes.
 	if (!gamePlaying) {
-		startTime = performance.now();
-		lastFrameTime = startTime;
-		startTime += COUNTDOWN_DURATION;
-
 		gamePlaying = true;
 		paused = false;
 
@@ -1058,6 +1054,10 @@ function startGame() {
 		// reset container position
 		container.style.transform = 'translate(0px, 0px)';
 
+		startTime = performance.now();
+		lastFrameTime = startTime;
+		startTime += COUNTDOWN_DURATION;
+
 		if (FIX_LATE_COUNTDOWN) {
 			render(performance.now());
 		} else {
@@ -1065,11 +1065,6 @@ function startGame() {
 		}
 	} else if (paused) {
 		// We just resume the render loop.
-		// First, account for the time that the
-		// game has spent not running.
-		var deltaTime = performance.now() - pauseTime;
-		startTime += deltaTime;
-		lastFrameTime += deltaTime;
 
 		// don't reset game state
 
@@ -1087,6 +1082,12 @@ function startGame() {
 		optionsMenu.style.display = 'none';
 
 		container.style.transform = 'translate(0px, 0px)';
+
+		// Account for the time that the
+		// game has spent not running.
+		var deltaTime = performance.now() - pauseTime;
+		startTime += deltaTime;
+		lastFrameTime += deltaTime;
 
 		if (FIX_LATE_COUNTDOWN) {
 			render(performance.now());
