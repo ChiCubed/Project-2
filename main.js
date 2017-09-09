@@ -35,12 +35,12 @@ var timeUniform;
 // This contains two triangles which
 // together make the plane.
 var vertices = [
-   -1.0, 1.0, // top left
-    1.0, 1.0, // top right
-    1.0,-1.0, // bottom right
-   -1.0, 1.0, // top left
-    1.0,-1.0, // bottom right
-   -1.0,-1.0  // bottom left
+	-1.0, 1.0, // top left
+	 1.0, 1.0, // top right
+	 1.0,-1.0, // bottom right
+	-1.0, 1.0, // top left
+	 1.0,-1.0, // bottom right
+	-1.0,-1.0  // bottom left
 ];
 
 // Shader sources
@@ -48,23 +48,23 @@ var vertShaderSrc, fragShaderSrc, obstacleSrc;
 
 // Light and DirectionalLight objects.
 function Light(pos, colour, intensity, range) {
-    this.pos = pos;
-    this.colour = colour;
-    this.intensity = intensity;
-    this.range = range;
+	this.pos = pos;
+	this.colour = colour;
+	this.intensity = intensity;
+	this.range = range;
 }
 
 function DirectionalLight(direction, colour, intensity) {
-    this.direction = direction;
-    this.colour = colour;
-    this.intensity = intensity;
+	this.direction = direction;
+	this.colour = colour;
+	this.intensity = intensity;
 }
 
 // Material object.
 function Material(diffuse, specular, shininess) {
-    this.diffuse = diffuse;
-    this.specular = specular;
-    this.shininess = shininess;
+	this.diffuse = diffuse;
+	this.specular = specular;
+	this.shininess = shininess;
 }
 
 // Obstacle object.
@@ -74,17 +74,17 @@ function Obstacle(pos, angle, type, mid, destroyable, chasePlayer) {
 	this.pos = pos;
 	this.angle = angle;
 	this.type = type;
-    this.mid = mid;
-    this.destroyable = Boolean(destroyable);
-    this.chasePlayer = Boolean(chasePlayer);
-    this.exists = true;
+	this.mid = mid;
+	this.destroyable = Boolean(destroyable);
+	this.chasePlayer = Boolean(chasePlayer);
+	this.exists = true;
 }
 
 // Level object.
 function Level(obstacles, winPosition, title) {
-    this.obstacles = obstacles;
-    this.winPosition = winPosition;
-    this.title = title;
+	this.obstacles = obstacles;
+	this.winPosition = winPosition;
+	this.title = title;
 }
 
 // More binding points
@@ -139,20 +139,20 @@ var MAX_NUM_MATERIALS = 32;
 var MAX_NUM_OBSTACLES = 32;
 
 var lights = [
-    new Light([0,3,-1],[1,1,1],1.5,40.0), // player light
-    new Light([0,4,-60],[0.8,0.8,1],1.0,50.0), // forwards light
-    new Light([0,4,-30],[0.6,0.6,0.6],1.0,40.0), // secondary forwards light
-    new Light([0,0,0],[1,1,1],0.0,40.0), // projectile light
-    new Light([0,0,0],[1,1,1],1.5,50.0) // win position light
+	new Light([0,3,-1],[1,1,1],1.5,40.0), // player light
+	new Light([0,4,-60],[0.8,0.8,1],1.0,50.0), // forwards light
+	new Light([0,4,-30],[0.6,0.6,0.6],1.0,40.0), // secondary forwards light
+	new Light([0,0,0],[1,1,1],0.0,40.0), // projectile light
+	new Light([0,0,0],[1,1,1],1.5,50.0) // win position light
 ];
 var directionalLights = [];
 var materials = [
-    new Material([1,0,0],[1,1,1],8.0), // player
-    new Material([0.35,0.25,0.7],[0.7,0.7,0.7],2.0), // wall
-    new Material([0.2,0.2,0.3],[1,1,1],4.0), // floor
+	new Material([1,0,0],[1,1,1],8.0), // player
+	new Material([0.35,0.25,0.7],[0.7,0.7,0.7],2.0), // wall
+	new Material([0.2,0.2,0.3],[1,1,1],4.0), // floor
 	new Material([0.4,0.4,0.4],[1,1,1],2.0), // for checker pattern
-    new Material([0.5,0.5,0.7],[1,1,1],8.0), // projectile
-    new Material([0.6,0.4,0.3],[1,1,1],4.0), // win plane
+	new Material([0.5,0.5,0.7],[1,1,1],8.0), // projectile
+	new Material([0.6,0.4,0.3],[1,1,1],4.0), // win plane
 	new Material([0.3,0.6,0.4],[0.5,0.7,0.4],8.0), // obstacles from this point
 	new Material([0.7,0.3,0.5],[1,1,1],8.0)
 ];
@@ -168,76 +168,76 @@ var currentLevel;
 // sorted by their z-position
 // in reverse.
 var levels = [
-    new Level([
-        new Obstacle([0,0,-100],0.0,0,6,true,false),
-        new Obstacle([0,0,-200],0.0,1,6,true,false),
-        new Obstacle([0,0,-300],0.0,2,6,true,false)
-    ], -500.0, 'Basics'),
-    new Level([
-        new Obstacle([-2,0,-80],0.0,0,7,false,false),
-        new Obstacle([2,0,-93],0.0,0,7,false,false),
-        new Obstacle([-2,0,-106],0.0,0,7,false,false)
-    ], -130.0, 'Indestructibles'),
-    new Level([
-        new Obstacle([-1.6,0,-70],0.0,1,6,true,false),
-        new Obstacle([-0.8,0,-80],0.0,1,7,false,false),
-        new Obstacle([ 0.0,0,-90],0.0,1,6,true,false),
-        new Obstacle([ 0.8,0,-100],0.0,1,7,false,false),
-        new Obstacle([ 1.6,0,-110],0.0,1,6,true,false),
-        new Obstacle([ 0.8,0,-120],0.0,1,7,false,false),
-        new Obstacle([ 0.0,0,-130],0.0,1,6,true,false),
-        new Obstacle([-0.8,0,-140],0.0,1,7,false,false),
-        new Obstacle([-1.6,0,-150],0.0,1,6,true,false)
-    ], -170.0, 'Precision'),
-    new Level([
-        new Obstacle([-2,0,-100],0.0,0,6,true,true),
-        new Obstacle([2,0,-200],0.0,2,7,false,true),
-    ], -250.0, 'Chasers'),
-    new Level([
-        new Obstacle([-3,0,-100],0.0,0,7,false,true),
-        new Obstacle([0,0,-100],0.0,1,7,false,true),
-        new Obstacle([3,0,-100],0.0,0,7,false,true),
-    ], -120.0, 'More Chasers'),
-    new Level([
-        new Obstacle([-4.2,0,-80],0.0,0,7,false,false),
-        new Obstacle([ 4.2,0,-80],0.0,0,7,false,false),
-        new Obstacle([-3,0,-100],0.0,1,7,false,true),
-        new Obstacle([-2,0,-110],0.0,1,7,false,true),
-        new Obstacle([-1,0,-120],0.0,1,7,false,true),
-        new Obstacle([ 0,0,-130],0.0,1,7,false,true),
-        new Obstacle([ 1,0,-140],0.0,1,7,false,true),
-        new Obstacle([ 2,0,-150],0.0,1,7,false,true),
-        new Obstacle([ 3,0,-160],0.0,1,7,false,true),
-    ], -200.0, 'Alignment'),
-    new Level([
-        new Obstacle([-2,2,-100],0.0,0,7,false,true),
-        new Obstacle([2,2,-100],0.0,0,7,false,true),
-        new Obstacle([-5,0.5,-100],1.57,0,7,false,true),
-        new Obstacle([ 5,0.5,-100],1.57,0,7,false,true),
+	new Level([
+		new Obstacle([0,0,-100],0.0,0,6,true,false),
+		new Obstacle([0,0,-200],0.0,1,6,true,false),
+		new Obstacle([0,0,-300],0.0,2,6,true,false)
+	], -500.0, 'Basics'),
+	new Level([
+		new Obstacle([-2,0,-80],0.0,0,7,false,false),
+		new Obstacle([2,0,-93],0.0,0,7,false,false),
+		new Obstacle([-2,0,-106],0.0,0,7,false,false)
+	], -130.0, 'Indestructibles'),
+	new Level([
+		new Obstacle([-1.6,0,-70],0.0,1,6,true,false),
+		new Obstacle([-0.8,0,-80],0.0,1,7,false,false),
+		new Obstacle([ 0.0,0,-90],0.0,1,6,true,false),
+		new Obstacle([ 0.8,0,-100],0.0,1,7,false,false),
+		new Obstacle([ 1.6,0,-110],0.0,1,6,true,false),
+		new Obstacle([ 0.8,0,-120],0.0,1,7,false,false),
+		new Obstacle([ 0.0,0,-130],0.0,1,6,true,false),
+		new Obstacle([-0.8,0,-140],0.0,1,7,false,false),
+		new Obstacle([-1.6,0,-150],0.0,1,6,true,false)
+	], -170.0, 'Precision'),
+	new Level([
+		new Obstacle([-2,0,-100],0.0,0,6,true,true),
+		new Obstacle([2,0,-200],0.0,2,7,false,true),
+	], -250.0, 'Chasers'),
+	new Level([
+		new Obstacle([-3,0,-100],0.0,0,7,false,true),
+		new Obstacle([0,0,-100],0.0,1,7,false,true),
+		new Obstacle([3,0,-100],0.0,0,7,false,true),
+	], -120.0, 'More Chasers'),
+	new Level([
+		new Obstacle([-4.2,0,-80],0.0,0,7,false,false),
+		new Obstacle([ 4.2,0,-80],0.0,0,7,false,false),
+		new Obstacle([-3,0,-100],0.0,1,7,false,true),
+		new Obstacle([-2,0,-110],0.0,1,7,false,true),
+		new Obstacle([-1,0,-120],0.0,1,7,false,true),
+		new Obstacle([ 0,0,-130],0.0,1,7,false,true),
+		new Obstacle([ 1,0,-140],0.0,1,7,false,true),
+		new Obstacle([ 2,0,-150],0.0,1,7,false,true),
+		new Obstacle([ 3,0,-160],0.0,1,7,false,true),
+	], -200.0, 'Alignment'),
+	new Level([
+		new Obstacle([-2,2,-100],0.0,0,7,false,true),
+		new Obstacle([2,2,-100],0.0,0,7,false,true),
+		new Obstacle([-5,0.5,-100],1.57,0,7,false,true),
+		new Obstacle([ 5,0.5,-100],1.57,0,7,false,true),
 
-        new Obstacle([-2,2,-170],0.0,0,7,false,true),
-        new Obstacle([2,2,-170],0.0,0,7,false,true),
-        new Obstacle([-5,0.5,-170],1.57,0,6,true,true),
-        new Obstacle([ 5,0.5,-170],1.57,0,7,false,true),
-    ], -200.0, 'Collapsing Structure'),
-    new Level([
-        new Obstacle([-3.2,0,-100],0.0,0,6,true,false),
-        new Obstacle([-1.1,0,-100],0.0,0,7,false,false),
-        new Obstacle([ 1.1,0,-100],0.0,0,7,false,false),
-        new Obstacle([ 3.2,0,-100],0.0,0,7,false,false),
-        new Obstacle([-3.2,0,-130],0.0,0,7,false,false),
-        new Obstacle([-1.1,0,-130],0.0,0,6,true,false),
-        new Obstacle([ 1.1,0,-130],0.0,0,6,true,false),
-        new Obstacle([ 3.2,0,-130],0.0,0,7,false,false),
-        new Obstacle([-3.2,0,-160],0.0,0,6,true,false),
-        new Obstacle([-1.1,0,-160],0.0,0,7,false,false),
-        new Obstacle([ 1.1,0,-160],0.0,0,6,true,false),
-        new Obstacle([ 3.2,0,-160],0.0,0,7,false,false),
-        new Obstacle([-3.2,0,-190],0.0,0,7,false,false),
-        new Obstacle([-1.1,0,-190],0.0,0,7,false,false),
-        new Obstacle([ 1.1,0,-190],0.0,0,7,false,false),
-        new Obstacle([ 3.2,0,-190],0.0,0,6,true,false),
-    ], -400.0, 'Maze')
+		new Obstacle([-2,2,-170],0.0,0,7,false,true),
+		new Obstacle([2,2,-170],0.0,0,7,false,true),
+		new Obstacle([-5,0.5,-170],1.57,0,6,true,true),
+		new Obstacle([ 5,0.5,-170],1.57,0,7,false,true),
+	], -200.0, 'Collapsing Structure'),
+	new Level([
+		new Obstacle([-3.2,0,-100],0.0,0,6,true,false),
+		new Obstacle([-1.1,0,-100],0.0,0,7,false,false),
+		new Obstacle([ 1.1,0,-100],0.0,0,7,false,false),
+		new Obstacle([ 3.2,0,-100],0.0,0,7,false,false),
+		new Obstacle([-3.2,0,-130],0.0,0,7,false,false),
+		new Obstacle([-1.1,0,-130],0.0,0,6,true,false),
+		new Obstacle([ 1.1,0,-130],0.0,0,6,true,false),
+		new Obstacle([ 3.2,0,-130],0.0,0,7,false,false),
+		new Obstacle([-3.2,0,-160],0.0,0,6,true,false),
+		new Obstacle([-1.1,0,-160],0.0,0,7,false,false),
+		new Obstacle([ 1.1,0,-160],0.0,0,6,true,false),
+		new Obstacle([ 3.2,0,-160],0.0,0,7,false,false),
+		new Obstacle([-3.2,0,-190],0.0,0,7,false,false),
+		new Obstacle([-1.1,0,-190],0.0,0,7,false,false),
+		new Obstacle([ 1.1,0,-190],0.0,0,7,false,false),
+		new Obstacle([ 3.2,0,-190],0.0,0,6,true,false),
+	], -400.0, 'Maze')
 ];
 
 
@@ -314,18 +314,18 @@ var hasRenderedPreview;
 
 
 function random(min, max) {
-    return min + Math.floor(Math.random()*(max-min+1));
+	return min + Math.floor(Math.random()*(max-min+1));
 }
 
 function shootProjectile() {
-    projectileExists = true;
-    projectilePos = playerPos.slice(); // copy player position
-    projectilePos[2] -= 2.4; // move in front of player
+	projectileExists = true;
+	projectilePos = playerPos.slice(); // copy player position
+	projectilePos[2] -= 2.4; // move in front of player
 
-    originalProjectileSpeed = playerSpeed;
+	originalProjectileSpeed = playerSpeed;
 
-    // the actual movement of the projectile
-    // is done in the main render loop.
+	// the actual movement of the projectile
+	// is done in the main render loop.
 }
 
 // handlers for buttons
@@ -337,12 +337,12 @@ function keyDownHandler(e) {
 		rightPressed = true;
 		e.preventDefault();
 	} else if (e.keyCode == 32) {
-        // spacebar - shoot projectile
-        if (!projectileExists) {
-            shootProjectile();
-        }
+		// spacebar - shoot projectile
+		if (!projectileExists) {
+			shootProjectile();
+		}
 		e.preventDefault();
-    }
+	}
 }
 
 function keyUpHandler(e) {
@@ -354,10 +354,10 @@ function keyUpHandler(e) {
 }
 
 function setLightUniforms(lightArray) {
-    gl.uniform1i(numLightsUniform, lightArray.length);
-    // Three _flat_ arrays storing the:
-    // positions, colours and intensities
-    // of the lights.
+	gl.uniform1i(numLightsUniform, lightArray.length);
+	// Three _flat_ arrays storing the:
+	// positions, colours and intensities
+	// of the lights.
 	if (lightArray.length > MAX_NUM_LIGHTS) {
 		console.log("Warning: Too many lights");
 		return;
@@ -367,67 +367,67 @@ function setLightUniforms(lightArray) {
 	// since GLSL only uses the first
 	// [lightArray.count] elements
 	// of these arrays.
-    var pos = new Array(MAX_NUM_LIGHTS * 3);
-    var colour = new Array(MAX_NUM_LIGHTS * 3);
-    var intensity = new Array(MAX_NUM_LIGHTS);
-    var recRangeSqr = new Array(MAX_NUM_LIGHTS);
-    for (var i=0; i<lightArray.length; ++i) {
+	var pos = new Array(MAX_NUM_LIGHTS * 3);
+	var colour = new Array(MAX_NUM_LIGHTS * 3);
+	var intensity = new Array(MAX_NUM_LIGHTS);
+	var recRangeSqr = new Array(MAX_NUM_LIGHTS);
+	for (var i=0; i<lightArray.length; ++i) {
 		for (var x=0; x<3; ++x) {
-        	pos[i*3+x]=lightArray[i].pos[x];
+			pos[i*3+x]=lightArray[i].pos[x];
 			colour[i*3+x]=lightArray[i].colour[x];
 		}
-        // since intensity is just a float we can do this
-        intensity[i] = lightArray[i].intensity;
-        recRangeSqr[i] = 1/(lightArray[i].range*lightArray[i].range);
-    }
-    // Now we set the values of the uniforms.
-    gl.uniform3fv(lightPosUniform, new Float32Array(pos));
-    gl.uniform3fv(lightColourUniform, new Float32Array(colour));
-    gl.uniform1fv(lightIntensityUniform, new Float32Array(intensity));
-    gl.uniform1fv(reciprocalLightRangeSquaredUniform, new Float32Array(recRangeSqr));
+		// since intensity is just a float we can do this
+		intensity[i] = lightArray[i].intensity;
+		recRangeSqr[i] = 1/(lightArray[i].range*lightArray[i].range);
+	}
+	// Now we set the values of the uniforms.
+	gl.uniform3fv(lightPosUniform, new Float32Array(pos));
+	gl.uniform3fv(lightColourUniform, new Float32Array(colour));
+	gl.uniform1fv(lightIntensityUniform, new Float32Array(intensity));
+	gl.uniform1fv(reciprocalLightRangeSquaredUniform, new Float32Array(recRangeSqr));
 }
 
 function setDirectionalLightUniforms(directionalLightArray) {
-    gl.uniform1i(numDirectionalLightsUniform, directionalLightArray.length);
+	gl.uniform1i(numDirectionalLightsUniform, directionalLightArray.length);
 	if(directionalLightArray.length>MAX_NUM_DIRECTIONAL_LIGHTS){
 		console.log("Warning: Too many directional lights");
 		return;
 	}
-    var direction = new Array(MAX_NUM_DIRECTIONAL_LIGHTS * 3);
-    var colour = new Array(MAX_NUM_DIRECTIONAL_LIGHTS * 3);
-    var intensity = new Array(MAX_NUM_DIRECTIONAL_LIGHTS);
-    for (var i=0; i<directionalLightArray.length; ++i) {
-        for (var x=0; x<3; ++x) {
-        	direction[i*3+x]=directionalLightArray[i].direction[x];
+	var direction = new Array(MAX_NUM_DIRECTIONAL_LIGHTS * 3);
+	var colour = new Array(MAX_NUM_DIRECTIONAL_LIGHTS * 3);
+	var intensity = new Array(MAX_NUM_DIRECTIONAL_LIGHTS);
+	for (var i=0; i<directionalLightArray.length; ++i) {
+		for (var x=0; x<3; ++x) {
+			direction[i*3+x]=directionalLightArray[i].direction[x];
 			colour[i*3+x]=directionalLightArray[i].colour[x];
 		}
-        // since intensity is just a float we can do this
-        intensity[i] = directionalLightArray[i].intensity;
-    }
-    gl.uniform3fv(directionalLightDirectionUniform, new Float32Array(direction));
-    gl.uniform3fv(directionalLightColourUniform, new Float32Array(colour));
+		// since intensity is just a float we can do this
+		intensity[i] = directionalLightArray[i].intensity;
+	}
+	gl.uniform3fv(directionalLightDirectionUniform, new Float32Array(direction));
+	gl.uniform3fv(directionalLightColourUniform, new Float32Array(colour));
 	gl.uniform1fv(directionalLightIntensityUniform, new Float32Array(intensity));
 }
 
 function setMaterialUniforms(materialArray) {
-    gl.uniform1i(numMaterialsUniform, materialArray.length);
-    if (materialArray.length>MAX_NUM_MATERIALS) {
-        console.log("Warning: Too many materials");
-        return;
-    }
-    var diffuse = new Array(MAX_NUM_MATERIALS * 3);
-    var specular = new Array(MAX_NUM_MATERIALS * 3);
-    var shininess = new Array(MAX_NUM_MATERIALS);
-    for (var i=0; i<materialArray.length; ++i) {
-        for (var x=0; x<3; ++x) {
-            diffuse[i*3+x]=materialArray[i].diffuse[x];
-            specular[i*3+x]=materialArray[i].specular[x];
-        }
-        shininess[i]=materialArray[i].shininess;
-    }
-    gl.uniform3fv(materialDiffuseColourUniform, new Float32Array(diffuse));
-    gl.uniform3fv(materialSpecularColourUniform, new Float32Array(specular));
-    gl.uniform1fv(materialShininessUniform, new Float32Array(shininess));
+	gl.uniform1i(numMaterialsUniform, materialArray.length);
+	if (materialArray.length>MAX_NUM_MATERIALS) {
+		console.log("Warning: Too many materials");
+		return;
+	}
+	var diffuse = new Array(MAX_NUM_MATERIALS * 3);
+	var specular = new Array(MAX_NUM_MATERIALS * 3);
+	var shininess = new Array(MAX_NUM_MATERIALS);
+	for (var i=0; i<materialArray.length; ++i) {
+		for (var x=0; x<3; ++x) {
+			diffuse[i*3+x]=materialArray[i].diffuse[x];
+			specular[i*3+x]=materialArray[i].specular[x];
+		}
+		shininess[i]=materialArray[i].shininess;
+	}
+	gl.uniform3fv(materialDiffuseColourUniform, new Float32Array(diffuse));
+	gl.uniform3fv(materialSpecularColourUniform, new Float32Array(specular));
+	gl.uniform1fv(materialShininessUniform, new Float32Array(shininess));
 }
 
 function setObstacleUniforms(obstacleArray) {
@@ -438,7 +438,7 @@ function setObstacleUniforms(obstacleArray) {
 	}
 	var pos = new Array(MAX_NUM_OBSTACLES * 3);
 	var invRot = new Array(MAX_NUM_OBSTACLES * 9);
-    var exists = new Array(MAX_NUM_OBSTACLES);
+	var exists = new Array(MAX_NUM_OBSTACLES);
 	var x; // inner loop var
 	for (var i=0; i<obstacleArray.length; ++i) {
 		for (x=0; x<3; ++x) {
@@ -451,11 +451,11 @@ function setObstacleUniforms(obstacleArray) {
 		for (x=0; x<9; ++x) {
 			invRot[i*9+x]=rot[x];
 		}
-        exists[i] = obstacleArray[i].exists;
+		exists[i] = obstacleArray[i].exists;
 	}
 	gl.uniform3fv(obstaclePosUniform, new Float32Array(pos));
 	gl.uniformMatrix3fv(obstacleInvRotationUniform, false, new Float32Array(invRot));
-    gl.uniform1fv(obstacleExistsUniform, new Float32Array(exists));
+	gl.uniform1fv(obstacleExistsUniform, new Float32Array(exists));
 }
 
 
@@ -463,23 +463,23 @@ function setObstacleUniforms(obstacleArray) {
 // a matrix for a roll rotation
 // i.e. tilting camera
 function rotateZ(a) {
-    return [Math.cos(a), -Math.sin(a), 0,
-            Math.sin(a),  Math.cos(a), 0,
-                      0,            0, 1];
+	return [Math.cos(a), -Math.sin(a), 0,
+			Math.sin(a),  Math.cos(a), 0,
+					  0,            0, 1];
 }
 
 // rotate left/right
 function rotateY(a) {
-    return [ Math.cos(a), 0, Math.sin(a),
-                       0, 1,           0,
-            -Math.sin(a), 0, Math.cos(a)];
+	return [ Math.cos(a), 0, Math.sin(a),
+					   0, 1,           0,
+			-Math.sin(a), 0, Math.cos(a)];
 }
 
 // pitch up/down
 function rotateX(a) {
-    return [1,           0,            0,
-            0, Math.cos(a), -Math.sin(a),
-            0, Math.sin(a),  Math.cos(a)];
+	return [1,           0,            0,
+			0, Math.cos(a), -Math.sin(a),
+			0, Math.sin(a),  Math.cos(a)];
 }
 
 // For colour manipulation
@@ -504,123 +504,123 @@ function rotateHue(c, h) {
 // Function to multiply two
 // 3x3 matrices.
 function mult3(m1, m2) {
-    var r = [0,0,0,0,0,0,0,0,0];
-    for (var i=0; i<3; ++i) {
-        for (var j=0; j<3; ++j) {
-            for (var k=0; k<3; ++k) {
-                r[i*3+j] += m1[i*3+k]*m2[k*3+j];
-            }
-        }
-    }
-    return r;
+	var r = [0,0,0,0,0,0,0,0,0];
+	for (var i=0; i<3; ++i) {
+		for (var j=0; j<3; ++j) {
+			for (var k=0; k<3; ++k) {
+				r[i*3+j] += m1[i*3+k]*m2[k*3+j];
+			}
+		}
+	}
+	return r;
 }
 
 // Function to transpose a
 // 3x3 matrix.
 function trans3(m) {
-    var r = [0,0,0,0,0,0,0,0,0];
-    for (var i=0; i<3; ++i) {
-        for (var j=0; j<3; ++j) {
-            r[j*3+i] = m[i*3+j];
-        }
-    }
-    return r;
+	var r = [0,0,0,0,0,0,0,0,0];
+	for (var i=0; i<3; ++i) {
+		for (var j=0; j<3; ++j) {
+			r[j*3+i] = m[i*3+j];
+		}
+	}
+	return r;
 }
 
 
 // Function to mix two
 // 3x1 vectors.
 function mix3(x, y, a) {
-    return [
-        x[0]*(1.0 - a) + y[0]*a,
-        x[1]*(1.0 - a) + y[1]*a,
-        x[2]*(1.0 - a) + y[2]*a
-    ];
+	return [
+		x[0]*(1.0 - a) + y[0]*a,
+		x[1]*(1.0 - a) + y[1]*a,
+		x[2]*(1.0 - a) + y[2]*a
+	];
 }
 
 
 function initWebGL(canvas) {    
-    var gl = null;
-    
-    // attempt to get a WebGL context
-    gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-    
-    if (!gl) {
-        alert('Failed to initialise WebGL.');
-    }
-    
-    return gl;
+	var gl = null;
+
+	// attempt to get a WebGL context
+	gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+
+	if (!gl) {
+		alert('Failed to initialise WebGL.');
+	}
+
+	return gl;
 }
 
 
 function createShader(gl, type, source) {
-    var shader = gl.createShader(type);
-    
-    // Load the source into the shader
-    gl.shaderSource(shader, source);
-    
-    gl.compileShader(shader);
-    
-    // We only return the shader if it
-    // compiled successfully.
-    var success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
-    if (success) {
-        return shader;
-    }
-    
-    // if the WebGL context wasn't lost:
-    if (!gl.isContextLost()) {
-        // Otherwise we log what went wrong.
-        console.log(gl.getShaderInfoLog(shader));
-    
-        gl.deleteShader(shader);
-    }
+	var shader = gl.createShader(type);
+
+	// Load the source into the shader
+	gl.shaderSource(shader, source);
+
+	gl.compileShader(shader);
+
+	// We only return the shader if it
+	// compiled successfully.
+	var success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+	if (success) {
+		return shader;
+	}
+
+	// if the WebGL context wasn't lost:
+	if (!gl.isContextLost()) {
+		// Otherwise we log what went wrong.
+		console.log(gl.getShaderInfoLog(shader));
+
+		gl.deleteShader(shader);
+	}
 }
 
 
 function createProgram(gl, vertexShader, fragmentShader) {
-    var program = gl.createProgram();
-    
-    gl.attachShader(program, vertexShader);
-    gl.attachShader(program, fragmentShader);
-    
-    gl.linkProgram(program);
-    
-    var success = gl.getProgramParameter(program, gl.LINK_STATUS);
-    if (success) {
-        return program;
-    }
-    
-    if (!gl.isContextLost()) {
-        console.log(gl.getProgramInfoLog(program));
+	var program = gl.createProgram();
 
-        gl.deleteProgram(program);
-    }
+	gl.attachShader(program, vertexShader);
+	gl.attachShader(program, fragmentShader);
+
+	gl.linkProgram(program);
+
+	var success = gl.getProgramParameter(program, gl.LINK_STATUS);
+	if (success) {
+		return program;
+	}
+
+	if (!gl.isContextLost()) {
+		console.log(gl.getProgramInfoLog(program));
+
+		gl.deleteProgram(program);
+	}
 }
 
 
 function generateProgramFromSources(vertex, fragment) {
-    var vertShader = createShader(gl, gl.VERTEX_SHADER, vertex);
-    var fragShader = createShader(gl, gl.FRAGMENT_SHADER, fragment);
+	var vertShader = createShader(gl, gl.VERTEX_SHADER, vertex);
+	var fragShader = createShader(gl, gl.FRAGMENT_SHADER, fragment);
 
-    // Now we 'link' them into a program
-    // which can be used by WebGL.
-    return createProgram(gl, vertShader, fragShader);
+	// Now we 'link' them into a program
+	// which can be used by WebGL.
+	return createProgram(gl, vertShader, fragShader);
 }
 
 
 function setupWebGLState() {
-    verticesBuffer = gl.createBuffer();
-    // gl.ARRAY_BUFFER is a 'bind point'
-    // for WebGL, which indicates where
-    // the data is located.
-    gl.bindBuffer(gl.ARRAY_BUFFER, verticesBuffer);
-    // We convert positions to a 32-bit float array.
-    // gl.STATIC_DRAW indicates that the plane
-    // will not move during the render loop.
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+	verticesBuffer = gl.createBuffer();
+	// gl.ARRAY_BUFFER is a 'bind point'
+	// for WebGL, which indicates where
+	// the data is located.
+	gl.bindBuffer(gl.ARRAY_BUFFER, verticesBuffer);
+	// We convert positions to a 32-bit float array.
+	// gl.STATIC_DRAW indicates that the plane
+	// will not move during the render loop.
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, verticesBuffer);
+	gl.bindBuffer(gl.ARRAY_BUFFER, verticesBuffer);
 
 	// Create the texture for collision detection
 	// red component is player collision,
@@ -651,9 +651,9 @@ function setupWebGLState() {
 	gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, collisionTexture, level);
 
 
-    // Now for the screenshot texture!
-    screenshotTexture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, screenshotTexture);
+	// Now for the screenshot texture!
+	screenshotTexture = gl.createTexture();
+	gl.bindTexture(gl.TEXTURE_2D, screenshotTexture);
 
 	gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, screenshotWidth, screenshotHeight, border, format, type, data);
 
@@ -670,9 +670,9 @@ function setupWebGLState() {
 	gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, screenshotTexture, level);
 
 
-    // The reason we can't just get the program attribute locations now is that
-    // the program is dynamically generated for each level that we play, and
-    // therefore will not exist when this function is called.
+	// The reason we can't just get the program attribute locations now is that
+	// the program is dynamically generated for each level that we play, and
+	// therefore will not exist when this function is called.
 }
 
 
@@ -699,10 +699,10 @@ function changeScreenshotSize(w, h) {
 	/*
 	 // The following code is not really
 	 // necessary, since the
-     // texture is already linked to
-     // the framebuffer. All we want
-     // to do is change the texture size,
-     // and we've done that.
+	 // texture is already linked to
+	 // the framebuffer. All we want
+	 // to do is change the texture size,
+	 // and we've done that.
 	 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 	 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 	 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
@@ -716,8 +716,8 @@ function changeScreenshotSize(w, h) {
 
 // sets canvas width / height
 function setCanvasSize(width, height) {
-    canvas.width = width;
-    canvas.height = height;
+	canvas.width = width;
+	canvas.height = height;
 	gl.viewport(0, 0, canvas.width, canvas.height);
 
 	// preview must be re-rendered
@@ -726,134 +726,134 @@ function setCanvasSize(width, height) {
 
 
 function getProgramAttribLocations() {
-    // The shader program now needs to know
-    // where the data being used in the
-    // vertex shader (namely the
-    // position attribute) is coming from.
-    // We set that here.
-    var positionAttribLoc = gl.getAttribLocation(program, 'position');
-    gl.enableVertexAttribArray(positionAttribLoc);
+	// The shader program now needs to know
+	// where the data being used in the
+	// vertex shader (namely the
+	// position attribute) is coming from.
+	// We set that here.
+	var positionAttribLoc = gl.getAttribLocation(program, 'position');
+	gl.enableVertexAttribArray(positionAttribLoc);
 
-    // We now tell WebGL how to extract
-    // data out of the array verticesBuffer
-    // and give it to the vertex shader.
-    // The three main arguments are the
-    // first three. In order these indicate:
-    // 1.  where to bind the current ARRAY_BUFFER to
-    // 2.  how many components there are per attribute
-    //       (in this case two)
-    // 3.  the type of the data
-    gl.vertexAttribPointer(positionAttribLoc, 2, gl.FLOAT, false, 0, 0);
+	// We now tell WebGL how to extract
+	// data out of the array verticesBuffer
+	// and give it to the vertex shader.
+	// The three main arguments are the
+	// first three. In order these indicate:
+	// 1.  where to bind the current ARRAY_BUFFER to
+	// 2.  how many components there are per attribute
+	//       (in this case two)
+	// 3.  the type of the data
+	gl.vertexAttribPointer(positionAttribLoc, 2, gl.FLOAT, false, 0, 0);
 
 
-    // We also get the uniform locations,
-    // to pass data to/from the shader.
-    screenSizeUniform = gl.getUniformLocation(program, "screenSize");
-    cameraPosUniform = gl.getUniformLocation(program, "cameraPos");
-    playerPosUniform = gl.getUniformLocation(program, "playerPos");
-    invPlayerRotationUniform = gl.getUniformLocation(program, "invPlayerRot");
-    viewToWorldUniform = gl.getUniformLocation(program, "viewToWorld");
-    timeUniform = gl.getUniformLocation(program, "time");
+	// We also get the uniform locations,
+	// to pass data to/from the shader.
+	screenSizeUniform = gl.getUniformLocation(program, "screenSize");
+	cameraPosUniform = gl.getUniformLocation(program, "cameraPos");
+	playerPosUniform = gl.getUniformLocation(program, "playerPos");
+	invPlayerRotationUniform = gl.getUniformLocation(program, "invPlayerRot");
+	viewToWorldUniform = gl.getUniformLocation(program, "viewToWorld");
+	timeUniform = gl.getUniformLocation(program, "time");
 
-    numLightsUniform = gl.getUniformLocation(program, "numLights");
-    lightPosUniform = gl.getUniformLocation(program, "lightPos");
-    lightColourUniform = gl.getUniformLocation(program, "lightColour");
-    lightIntensityUniform = gl.getUniformLocation(program, "lightIntensity");
-    reciprocalLightRangeSquaredUniform = gl.getUniformLocation(program, "reciprocalLightRangeSquared");
+	numLightsUniform = gl.getUniformLocation(program, "numLights");
+	lightPosUniform = gl.getUniformLocation(program, "lightPos");
+	lightColourUniform = gl.getUniformLocation(program, "lightColour");
+	lightIntensityUniform = gl.getUniformLocation(program, "lightIntensity");
+	reciprocalLightRangeSquaredUniform = gl.getUniformLocation(program, "reciprocalLightRangeSquared");
 
-    numDirectionalLightsUniform = gl.getUniformLocation(program, "numDirectionalLights");
-    directionalLightDirectionUniform = gl.getUniformLocation(program, "directionalLightDirection");
-    directionalLightColourUniform = gl.getUniformLocation(program, "directionalLightColour");
-    directionalLightIntensityUniform = gl.getUniformLocation(program, "directionalLightIntensity");
+	numDirectionalLightsUniform = gl.getUniformLocation(program, "numDirectionalLights");
+	directionalLightDirectionUniform = gl.getUniformLocation(program, "directionalLightDirection");
+	directionalLightColourUniform = gl.getUniformLocation(program, "directionalLightColour");
+	directionalLightIntensityUniform = gl.getUniformLocation(program, "directionalLightIntensity");
 
-    numMaterialsUniform = gl.getUniformLocation(program, "numMaterials");
-    materialDiffuseColourUniform = gl.getUniformLocation(program, "materialDiffuseColour");
-    materialSpecularColourUniform = gl.getUniformLocation(program, "materialSpecularColour");
-    materialShininessUniform = gl.getUniformLocation(program, "materialShininess");
+	numMaterialsUniform = gl.getUniformLocation(program, "numMaterials");
+	materialDiffuseColourUniform = gl.getUniformLocation(program, "materialDiffuseColour");
+	materialSpecularColourUniform = gl.getUniformLocation(program, "materialSpecularColour");
+	materialShininessUniform = gl.getUniformLocation(program, "materialShininess");
 
 	numObstaclesUniform = gl.getUniformLocation(program, "numObstacles");
 	obstaclePosUniform = gl.getUniformLocation(program, "obstaclePos");
 	obstacleInvRotationUniform = gl.getUniformLocation(program, "obstacleInvRotation");
-    obstacleExistsUniform = gl.getUniformLocation(program, "obstacleExists");
+	obstacleExistsUniform = gl.getUniformLocation(program, "obstacleExists");
 
-    projectileExistsUniform = gl.getUniformLocation(program, "projectileExists");
-    projectilePosUniform = gl.getUniformLocation(program, "projectilePos");
+	projectileExistsUniform = gl.getUniformLocation(program, "projectileExists");
+	projectilePosUniform = gl.getUniformLocation(program, "projectilePos");
 
 	isCollisionDetectionUniform = gl.getUniformLocation(program, "isCollisionDetection");
 
-    winPositionUniform = gl.getUniformLocation(program, "winPosition");
+	winPositionUniform = gl.getUniformLocation(program, "winPosition");
 }
 
 
 // Loosely based off https://jsfiddle.net/12aueufy/1/
 function shakeCanvas(time) {
-    // Restore original element translation at the start.
-    container.style.transform = 'translate(0px, 0px)';
+	// Restore original element translation at the start.
+	container.style.transform = 'translate(0px, 0px)';
 
-    if (shakeFramesLeft <= 0) {
-        // We're finished.
-        return;
-    }
+	if (shakeFramesLeft <= 0) {
+		// We're finished.
+		return;
+	}
 
-    shakeMagnitude += shakeMagnitudeDelta;
+	shakeMagnitude += shakeMagnitudeDelta;
 
-    var randX = random(-shakeMagnitude, shakeMagnitude);
-    var randY = random(-shakeMagnitude * 0.5, shakeMagnitude * 0.5);
-    var randRot = random(-shakeMagnitude * 0.1, shakeMagnitude * 0.1);
+	var randX = random(-shakeMagnitude, shakeMagnitude);
+	var randY = random(-shakeMagnitude * 0.5, shakeMagnitude * 0.5);
+	var randRot = random(-shakeMagnitude * 0.1, shakeMagnitude * 0.1);
 
-    // Javascript will automatically make randX, randY and randRot
-    // strings for us.
-    container.style.transform = 'rotate(' + randRot + 'deg) translate(' + randX + 'px, ' + randY + 'px)';
+	// Javascript will automatically make randX, randY and randRot
+	// strings for us.
+	container.style.transform = 'rotate(' + randRot + 'deg) translate(' + randX + 'px, ' + randY + 'px)';
 
-    shakeFramesLeft--;
-    requestAnimationFrame(shakeCanvas);
+	shakeFramesLeft--;
+	requestAnimationFrame(shakeCanvas);
 }
 
 
 function addLevelButtons(levelMenuElem) {
-    // This adds buttons to the
-    // element defined by levelMenuElem,
-    // one for each level. These buttons
-    // can be clicked by the user to send
-    // them to that level.
+	// This adds buttons to the
+	// element defined by levelMenuElem,
+	// one for each level. These buttons
+	// can be clicked by the user to send
+	// them to that level.
 
-    // Firstly add a side-scrolling element
-    // to hold the levels.
-    var lvlBtnMenu = document.createElement('div');
-    lvlBtnMenu.className = 'levelSelectionMenu';
+	// Firstly add a side-scrolling element
+	// to hold the levels.
+	var lvlBtnMenu = document.createElement('div');
+	lvlBtnMenu.className = 'levelSelectionMenu';
 
-    for (var i = 0; i < levels.length; ++i) {
-        var btn = document.createElement('button');
-        // automatically converted to string
-        btn.innerHTML = i+1 + '. ' + levels[i].title;
-        btn.className = 'levelButton';
-        btn.onclick = levelLoader(i);
-        lvlBtnMenu.appendChild(btn);
-    }
+	for (var i = 0; i < levels.length; ++i) {
+		var btn = document.createElement('button');
+		// automatically converted to string
+		btn.innerHTML = i+1 + '. ' + levels[i].title;
+		btn.className = 'levelButton';
+		btn.onclick = levelLoader(i);
+		lvlBtnMenu.appendChild(btn);
+	}
 
-    levelMenuElem.appendChild(lvlBtnMenu);
+	levelMenuElem.appendChild(lvlBtnMenu);
 }
 
 
 function injectObstacleSceneData(fragment, obstacles) {
-    // We inject the data for the obstacles
-    // into the shader, so they are rendered.
-    var sceneObstacles = 'HitPoint obstacleHit = HitPoint(FAR_DIST, 0, 255);\n' +
-                         'HitPoint thisHit;';
+	// We inject the data for the obstacles
+	// into the shader, so they are rendered.
+	var sceneObstacles = 'HitPoint obstacleHit = HitPoint(FAR_DIST, 0, 255);\n' +
+						 'HitPoint thisHit;';
 
-    for (var i = 0; i < obstacles.length; ++i) {
-        sceneObstacles += 'thisHit = obstacleDist'+obstacles[i].type+'(\n' +
-                          '    FAR_DIST * (1.0 - obstacleExists['+i+']) +\n' +
-                          '    obstacleInvRotation['+i+']*(p - obstaclePos['+i+']),\n' +
-                          '    ' + obstacles[i].mid + ',\n' +
-                          '    ' + i + '\n' +
-                          ');\n' +
-                          'obstacleHit = min(obstacleHit, thisHit);\n';
-    }
+	for (var i = 0; i < obstacles.length; ++i) {
+		sceneObstacles += 'thisHit = obstacleDist'+obstacles[i].type+'(\n' +
+						  '    FAR_DIST * (1.0 - obstacleExists['+i+']) +\n' +
+						  '    obstacleInvRotation['+i+']*(p - obstaclePos['+i+']),\n' +
+						  '    ' + obstacles[i].mid + ',\n' +
+						  '    ' + i + '\n' +
+						  ');\n' +
+						  'obstacleHit = min(obstacleHit, thisHit);\n';
+	}
 
-    sceneObstacles += 'return obstacleHit;\n';
+	sceneObstacles += 'return obstacleHit;\n';
 
-    return fragment.replace('_PLACEHOLDER_FOR_OBSTACLE_SCENE_DATA', sceneObstacles);
+	return fragment.replace('_PLACEHOLDER_FOR_OBSTACLE_SCENE_DATA', sceneObstacles);
 }
 
 
@@ -863,34 +863,34 @@ function injectObstacleSceneData(fragment, obstacles) {
 
 
 function levelLoader(levelID) {
-    // returns a function which will
-    // load the level levelID.
-    var loadLvl = function() { loadLevel(levelID); };
-    return loadLvl;
+	// returns a function which will
+	// load the level levelID.
+	var loadLvl = function() { loadLevel(levelID); };
+	return loadLvl;
 }
 
 
 function selectLevel() {
-    // just in case the game is still going
-    // (which it shouldn't be, but this will
-    //  prevent an issue occuring)
-    cancelAnimationFrame(requestId);
+	// just in case the game is still going
+	// (which it shouldn't be, but this will
+	//  prevent an issue occuring)
+	cancelAnimationFrame(requestId);
 
-    gamePlaying = false;
-    paused = false;
+	gamePlaying = false;
+	paused = false;
 
-    // draw menu
-    levelMenu.style.display = '';
+	// draw menu
+	levelMenu.style.display = '';
 
-    // make other menus invisible
+	// make other menus invisible
 	optionsMenu.style.display = 'none';
-    gameOverMenu.style.display = 'none';
-    winMenu.style.display = 'none';
-    pauseButton.style.display = 'none';
-    pauseMenu.style.display = 'none';
+	gameOverMenu.style.display = 'none';
+	winMenu.style.display = 'none';
+	pauseButton.style.display = 'none';
+	pauseMenu.style.display = 'none';
 
 	countdown.style.display = 'none';
-    fpsElement.innerHTML = 'Not in game';
+	fpsElement.innerHTML = 'Not in game';
 }
 
 
@@ -912,10 +912,10 @@ function openOptions(returnFunc, returnName) {
 
 	// make other menus invisible
 	levelMenu.style.display = 'none';
-    gameOverMenu.style.display = 'none';
-    winMenu.style.display = 'none';
-    pauseButton.style.display = 'none';
-    pauseMenu.style.display = 'none';
+	gameOverMenu.style.display = 'none';
+	winMenu.style.display = 'none';
+	pauseButton.style.display = 'none';
+	pauseMenu.style.display = 'none';
 }
 
 
@@ -925,185 +925,185 @@ function openOptions(returnFunc, returnName) {
 // obstacles for the current scene,
 // and starts the game.
 function loadLevel(levelID) {
-	fpsElement.innerHTML = 'Loading level';
+  fpsElement.innerHTML = 'Loading level';
 
-    // We don't want to load the level
-    // if we're mid-game!
-    if (gamePlaying) return;
+	// We don't want to load the level
+	// if we're mid-game!
+	if (gamePlaying) return;
 
-    currentLevel = levelID;
+	currentLevel = levelID;
 
-    var newFragShaderSrc = injectObstacleSceneData(fragShaderSrc, levels[levelID].obstacles);
-    program = generateProgramFromSources(vertShaderSrc, newFragShaderSrc);
-    // This function does things like get the locations of uniforms
-    // so we can set them. Always a handy thing to be able to do.
-    getProgramAttribLocations();
+	var newFragShaderSrc = injectObstacleSceneData(fragShaderSrc, levels[levelID].obstacles);
+	program = generateProgramFromSources(vertShaderSrc, newFragShaderSrc);
+	// This function does things like get the locations of uniforms
+	// so we can set them. Always a handy thing to be able to do.
+	getProgramAttribLocations();
 
-    // start the level
-    // We use setTimeout to ensure
-    // the browser has time to update
-    // the fps counter's text to
-    // "Loading game".
-    setTimeout(startGame, 15);
+	// start the level
+	// We use setTimeout to ensure
+	// the browser has time to update
+	// the fps counter's text to
+	// "Loading game".
+	setTimeout(startGame, 15);
 }
 
 
 function loseGame() {
-    // We want to stop the game execution
-    cancelAnimationFrame(requestId);
+	// We want to stop the game execution
+	cancelAnimationFrame(requestId);
 
-    gamePlaying = false;
-    paused = false;
+	gamePlaying = false;
+	paused = false;
 
-    // draw menu
-    // i.e. make it not invisible
-    gameOverMenu.style.display = '';
+	// draw menu
+	// i.e. make it not invisible
+	gameOverMenu.style.display = '';
 
-    winMenu.style.display = 'none';
-    levelMenu.style.display = 'none';
+	winMenu.style.display = 'none';
+	levelMenu.style.display = 'none';
 	optionsMenu.style.display = 'none';
 
-    // hide pause button
-    pauseButton.style.display = 'none';
-    pauseMenu.style.display = 'none';
+	// hide pause button
+	pauseButton.style.display = 'none';
+	pauseMenu.style.display = 'none';
 
 	countdown.style.display = 'none';
-    // After a short delay update the FPS counter
+	// After a short delay update the FPS counter
 	setTimeout(function() {
-        fpsElement.innerHTML = 'Level failed';
-    }, 15);
+		fpsElement.innerHTML = 'Level failed';
+	}, 15);
 
-    // Make canvas shake
-    shakeFramesLeft = 15;
-    shakeMagnitude = 30;
-    shakeMagnitudeDelta = -2;
-    shakeCanvas();
+	// Make canvas shake
+	shakeFramesLeft = 15;
+	shakeMagnitude = 30;
+	shakeMagnitudeDelta = -2;
+	shakeCanvas();
 }
 
 
 function winGame() {
-    // Stop game execution
-    cancelAnimationFrame(requestId);
+	// Stop game execution
+	cancelAnimationFrame(requestId);
 
-    gamePlaying = false;
-    paused = false;
+	gamePlaying = false;
+	paused = false;
 
-    winMenu.style.display = '';
+	winMenu.style.display = '';
 
-    gameOverMenu.style.display = 'none';
-    levelMenu.style.display = 'none';
+	gameOverMenu.style.display = 'none';
+	levelMenu.style.display = 'none';
 	optionsMenu.style.display = 'none';
 
-    pauseButton.style.display = 'none';
-    pauseMenu.style.display = 'none';
+	pauseButton.style.display = 'none';
+	pauseMenu.style.display = 'none';
 
 	countdown.style.display = 'none';
 	setTimeout(function() {
-        fpsElement.innerHTML = 'Level complete';
-    }, 15);
+		fpsElement.innerHTML = 'Level complete';
+	}, 15);
 
-    // Make canvas shake
-    shakeFramesLeft = 15;
-    shakeMagnitude = 30;
-    shakeMagnitudeDelta = -2;
-    shakeCanvas();
+	// Make canvas shake
+	shakeFramesLeft = 15;
+	shakeMagnitude = 30;
+	shakeMagnitudeDelta = -2;
+	shakeCanvas();
 }
 
 
 function startGame() {
-    // Starts game.
-    // If already playing (but is paused),
-    // resumes.
-    if (!gamePlaying) {
-        startTime = performance.now();
-        lastFrameTime = startTime;
+	// Starts game.
+	// If already playing (but is paused),
+	// resumes.
+	if (!gamePlaying) {
+		startTime = performance.now();
+		lastFrameTime = startTime;
 		startTime += COUNTDOWN_DURATION;
 
-        gamePlaying = true;
-        paused = false;
+		gamePlaying = true;
+		paused = false;
 
 		hasRenderedPreview = false;
 
-        // reset vars
-        playerPos = [0.0, 0.0, 0.0];
-        playerSpeed = 1.0;
+		// reset vars
+		playerPos = [0.0, 0.0, 0.0];
+		playerSpeed = 1.0;
 		playerRotation = 0.0;
-        projectileExists = false;
-        // Create a copy of the obstacles
-        // We have to make a deep copy so we don't
-        // modify the originals.
-        obstacles = [];
-        for (var i = 0; i < levels[currentLevel].obstacles.length; ++i) {
-            var x = levels[currentLevel].obstacles[i];
-            // We do .slice() on x.pos to create a copy
-            // of the array.
-            obstacles.push(new Obstacle(x.pos.slice(), x.angle, x.type, x.mid, x.destroyable, x.chasePlayer));
-        }
-        winPosition = levels[currentLevel].winPosition;
+		projectileExists = false;
+		// Create a copy of the obstacles
+		// We have to make a deep copy so we don't
+		// modify the originals.
+		obstacles = [];
+		for (var i = 0; i < levels[currentLevel].obstacles.length; ++i) {
+			var x = levels[currentLevel].obstacles[i];
+			// We do .slice() on x.pos to create a copy
+			// of the array.
+			obstacles.push(new Obstacle(x.pos.slice(), x.angle, x.type, x.mid, x.destroyable, x.chasePlayer));
+		}
+		winPosition = levels[currentLevel].winPosition;
 
-        // show pause button, hide pause menu
-        pauseButton.style.display = '';
-        pauseMenu.style.display = 'none';
+		// show pause button, hide pause menu
+		pauseButton.style.display = '';
+		pauseMenu.style.display = 'none';
 
-        // make menus invisible
-        gameOverMenu.style.display = 'none';
-        winMenu.style.display = 'none';
-        levelMenu.style.display = 'none';
+		// make menus invisible
+		gameOverMenu.style.display = 'none';
+		winMenu.style.display = 'none';
+		levelMenu.style.display = 'none';
 		optionsMenu.style.display = 'none';
 
-        countdown.style.display = '';
+		countdown.style.display = '';
 
 		fpsElement.innerHTML = 'Starting game';
 
-        // reset container position
-        container.style.transform = 'translate(0px, 0px)';
+		// reset container position
+		container.style.transform = 'translate(0px, 0px)';
 
-        if (FIX_LATE_COUNTDOWN) {
-            render(performance.now());
-        } else {
-            requestId = requestAnimationFrame(render, canvas);
-        }
-    } else if (paused) {
-        // We just resume the render loop.
-        // First, account for the time that the
-        // game has spent not running.
-        var deltaTime = performance.now() - pauseTime;
-        startTime += deltaTime;
-        lastFrameTime += deltaTime;
+		if (FIX_LATE_COUNTDOWN) {
+			render(performance.now());
+		} else {
+			requestId = requestAnimationFrame(render, canvas);
+		}
+	} else if (paused) {
+		// We just resume the render loop.
+		// First, account for the time that the
+		// game has spent not running.
+		var deltaTime = performance.now() - pauseTime;
+		startTime += deltaTime;
+		lastFrameTime += deltaTime;
 
-        // don't reset game state
+		// don't reset game state
 
-        gamePlaying = true;
-        paused = false;
+		gamePlaying = true;
+		paused = false;
 
-        // show pause button, hide pause menu
-        pauseButton.style.display = '';
-        pauseMenu.style.display = 'none';
+		// show pause button, hide pause menu
+		pauseButton.style.display = '';
+		pauseMenu.style.display = 'none';
 
-        // ensure menus are invisible
-        gameOverMenu.style.display = 'none';
-        winMenu.style.display = 'none';
-        levelMenu.style.display = 'none';
+		// ensure menus are invisible
+		gameOverMenu.style.display = 'none';
+		winMenu.style.display = 'none';
+		levelMenu.style.display = 'none';
 		optionsMenu.style.display = 'none';
 
-        container.style.transform = 'translate(0px, 0px)';
+		container.style.transform = 'translate(0px, 0px)';
 
-        if (FIX_LATE_COUNTDOWN) {
-            render(performance.now());
-        } else {
-            requestId = requestAnimationFrame(render, canvas);
-        }
-    }
+		if (FIX_LATE_COUNTDOWN) {
+			render(performance.now());
+		} else {
+			requestId = requestAnimationFrame(render, canvas);
+		}
+	}
 }
 
 
 function pauseGame() {
-    if (!gamePlaying) {
-        // We're not actually in-game.
-        return;
-    }
-    // stop rendering
-    cancelAnimationFrame(requestId);
+	if (!gamePlaying) {
+		// We're not actually in-game.
+		return;
+	}
+	// stop rendering
+	cancelAnimationFrame(requestId);
 
 	// We only set the pause time the first
 	// time we pause the game. Subsequent times
@@ -1114,71 +1114,71 @@ function pauseGame() {
 		paused = true;
 	}
 
-    pauseButton.style.display = 'none';
-    pauseMenu.style.display = '';
+	pauseButton.style.display = 'none';
+	pauseMenu.style.display = '';
 
-    // just in case...
-    gameOverMenu.style.display = 'none';
-    winMenu.style.display = 'none';
-    levelMenu.style.display = 'none';
+	// just in case...
+	gameOverMenu.style.display = 'none';
+	winMenu.style.display = 'none';
+	levelMenu.style.display = 'none';
 	optionsMenu.style.display = 'none';
 }
 
 
 function handleVisibilityChange() {
-    if (document.hidden) {
-        // we just left the tab.
-        // pause
-        pauseGame();
-    }
+	if (document.hidden) {
+		// we just left the tab.
+		// pause
+		pauseGame();
+	}
 }
 
 
 function moveLights() {
-	// Move the 'player light' to near the player
-    // We scale down the player position to prevent
-    // the light from getting close to a wall,
-    // which would cause artifacts.
-    lights[0].pos[0] = playerPos[0]*0.8;
-    lights[0].pos[1] = playerPos[1] + 4.0;
-    lights[0].pos[2] = playerPos[2];
+  // Move the 'player light' to near the player
+	// We scale down the player position to prevent
+	// the light from getting close to a wall,
+	// which would cause artifacts.
+	lights[0].pos[0] = playerPos[0]*0.8;
+	lights[0].pos[1] = playerPos[1] + 4.0;
+	lights[0].pos[2] = playerPos[2];
 
-    // Prevent it from going past the win location
-    lights[0].pos[2] = Math.max(lights[0].pos[2], winPosition + 5);
+	// Prevent it from going past the win location
+	lights[0].pos[2] = Math.max(lights[0].pos[2], winPosition + 5);
 
-    // Also another light
-    lights[1].pos[0] = 0.0;
-    lights[1].pos[1] = playerPos[1] + 5.0;
-    lights[1].pos[2] = playerPos[2] - 60.0;
+	// Also another light
+	lights[1].pos[0] = 0.0;
+	lights[1].pos[1] = playerPos[1] + 5.0;
+	lights[1].pos[2] = playerPos[2] - 60.0;
 
-    // Also prevent it from going past the win position
-    lights[1].pos[2] = Math.max(lights[1].pos[2], winPosition + 5);
+	// Also prevent it from going past the win position
+	lights[1].pos[2] = Math.max(lights[1].pos[2], winPosition + 5);
 
-    // Also the secondary forwards light
-    lights[2].pos[0] = 0.0;
-    lights[2].pos[1] = playerPos[1] + 5.0;
-    lights[2].pos[2] = playerPos[2] - 30.0;
+	// Also the secondary forwards light
+	lights[2].pos[0] = 0.0;
+	lights[2].pos[1] = playerPos[1] + 5.0;
+	lights[2].pos[2] = playerPos[2] - 30.0;
 
-    // Also prevent it from going past the win position
-    lights[2].pos[2] = Math.max(lights[2].pos[2], winPosition + 5);
+	// Also prevent it from going past the win position
+	lights[2].pos[2] = Math.max(lights[2].pos[2], winPosition + 5);
 
-    // Also projectile light
-    if (projectileExists) {
-        // Set colour to rotating wall colour
-        lights[3].colour = materials[1].diffuse;
+	// Also projectile light
+	if (projectileExists) {
+		// Set colour to rotating wall colour
+		lights[3].colour = materials[1].diffuse;
 
-        lights[3].pos[0] = projectilePos[0]*0.8;
-        lights[3].pos[1] = projectilePos[1] + 3.0;
-        lights[3].pos[2] = projectilePos[2];
-        lights[3].intensity = 2.0;
-    } else {
-        lights[3].intensity = 0.0;
-    }
+		lights[3].pos[0] = projectilePos[0]*0.8;
+		lights[3].pos[1] = projectilePos[1] + 3.0;
+		lights[3].pos[2] = projectilePos[2];
+		lights[3].intensity = 2.0;
+	} else {
+		lights[3].intensity = 0.0;
+	}
 
-    // Also, ending / win position light
-    lights[4].pos[0] = 0.0;
-    lights[4].pos[1] = 2.0;
-    lights[4].pos[2] = winPosition + 5.0;
+	// Also, ending / win position light
+	lights[4].pos[0] = 0.0;
+	lights[4].pos[1] = 2.0;
+	lights[4].pos[2] = winPosition + 5.0;
 }
 
 
@@ -1187,18 +1187,18 @@ function moveLights() {
 // returns true if any obstacles
 // were moved, otherwise false.
 function chasePlayer(chaseSpeed) {
-    var anyMoved = false;
-    for (var i = 0; i < obstacles.length; ++i) {
-        if (obstacles[i].chasePlayer) {
-            // This obstacle is one that
-            // can move towards the player.
+	var anyMoved = false;
+	for (var i = 0; i < obstacles.length; ++i) {
+		if (obstacles[i].chasePlayer) {
+			// This obstacle is one that
+			// can move towards the player.
 
-            anyMoved = true;
-            // make obstacle move towards player
-            obstacles[i].pos = mix3(obstacles[i].pos, playerPos, chaseSpeed);
-        }
-    }
-    return anyMoved;
+			anyMoved = true;
+			// make obstacle move towards player
+			obstacles[i].pos = mix3(obstacles[i].pos, playerPos, chaseSpeed);
+		}
+	}
+	return anyMoved;
 }
 
 
@@ -1207,23 +1207,23 @@ function chasePlayer(chaseSpeed) {
 // the scene, and does most of
 // the game logic.
 function render(time) {
-    // sanity check
-    if (program === null) {
-        // The program hasn't loaded yet!
-        return;
-    }
+	// sanity check
+	if (program === null) {
+		// The program hasn't loaded yet!
+		return;
+	}
 
 	// temporary rotation matrices
 	var m, pm;
 
-    // setup the browser for the
+	// setup the browser for the
 	// next frame
-    requestId = requestAnimationFrame(render, canvas);
+	requestId = requestAnimationFrame(render, canvas);
 
-    // check if player has won level
-    if (playerPos[2] <= winPosition) {
-        winGame();
-    }
+	// check if player has won level
+	if (playerPos[2] <= winPosition) {
+		winGame();
+	}
 
 	var deltaTime = time - lastFrameTime;
 	var currentTime = time - startTime;
@@ -1264,8 +1264,8 @@ function render(time) {
 			gl.uniform3fv(projectilePosUniform, new Float32Array(projectilePos));
 		}
 
-        cameraPos[1] = playerPos[1] + 4.5;
-        cameraPos[2] = playerPos[2] + 20.0;
+		cameraPos[1] = playerPos[1] + 4.5;
+		cameraPos[2] = playerPos[2] + 20.0;
 		gl.uniform3fv(cameraPosUniform, new Float32Array(cameraPos));
 
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -1283,24 +1283,24 @@ function render(time) {
 	if (currentTime < 0) {
 		// During countdown
 		countdown.innerHTML = Math.min(-Math.floor(currentTime / 1000), Math.floor(COUNTDOWN_DURATION / 1000));
-        countdown.style.opacity = 1.0;
+		countdown.style.opacity = 1.0;
 
 		lastFrameTime = time;
 
-        fpsElement.innerHTML = 'Starting game';
+		fpsElement.innerHTML = 'Starting game';
 
 		return;
 	} else if (currentTime < 1000) {
 		// Display the word 'Go'
 		countdown.innerHTML = 'GO';
-        countdown.style.opacity = (1.0 - currentTime / 1000);
+		countdown.style.opacity = (1.0 - currentTime / 1000);
 	} else {
 		countdown.style.display = 'none';
 	}
 
-    // Update the scene
-    var isMovingRight = (rightPressed && !leftPressed);
-    var isMovingLeft  = (leftPressed && !rightPressed);
+	// Update the scene
+	var isMovingRight = (rightPressed && !leftPressed);
+	var isMovingLeft  = (leftPressed && !rightPressed);
 
 	// We rotate the player based on
 	// which keys are pressed.
@@ -1326,30 +1326,30 @@ function render(time) {
 	materials[1].diffuse = rotateHue([0.35,0.25,0.7], currentTime*0.01);
 
 	// Tell WebGL to use our shader program.
-    gl.useProgram(program);
+	gl.useProgram(program);
 
 	// Set the uniforms
-    gl.uniform2f(screenSizeUniform, canvas.width, canvas.height);
-    // divide by 1000: ms -> s
-    gl.uniform1f(timeUniform,currentTime/1000.0);
+	gl.uniform2f(screenSizeUniform, canvas.width, canvas.height);
+	// divide by 1000: ms -> s
+	gl.uniform1f(timeUniform,currentTime/1000.0);
 
-    setMaterialUniforms(materials);
-    setObstacleUniforms(obstacles);
+	setMaterialUniforms(materials);
+	setObstacleUniforms(obstacles);
 
-    // We need to calculate the rotation matrix from
-    // view to world.
-    // First get the transformation matrix.
-    m = mult3(mult3(rotateY(angle[0]), rotateX(angle[1])), rotateZ(angle[2]));
-    // We transpose the matrix to make WebGL happy.
-    m = trans3(m);
-    // Now set the uniform.
-    gl.uniformMatrix3fv(viewToWorldUniform, false, new Float32Array(m));
+	// We need to calculate the rotation matrix from
+	// view to world.
+	// First get the transformation matrix.
+	m = mult3(mult3(rotateY(angle[0]), rotateX(angle[1])), rotateZ(angle[2]));
+	// We transpose the matrix to make WebGL happy.
+	m = trans3(m);
+	// Now set the uniform.
+	gl.uniformMatrix3fv(viewToWorldUniform, false, new Float32Array(m));
 
 
 
-    // Write the win position.
-    // Not strictly necessary to do every frame.
-    gl.uniform1f(winPositionUniform, winPosition);
+	// Write the win position.
+	// Not strictly necessary to do every frame.
+	gl.uniform1f(winPositionUniform, winPosition);
 
 	// Render to the collision texture.
 	// The fragment shader writes to the
@@ -1363,7 +1363,7 @@ function render(time) {
 	gl.uniform1f(isCollisionDetectionUniform, true);
 
 	// how far out the wall is at the moment.
-    var wallDist = 4.5 + Math.sin(0.1 * playerPos[2]) * 0.5;
+	var wallDist = 4.5 + Math.sin(0.1 * playerPos[2]) * 0.5;
 
 	// Collision detection.
 	// Move player + projectile in increments.
@@ -1416,16 +1416,16 @@ function render(time) {
 		// Player pos uniform
 		gl.uniform3fv(playerPosUniform, new Float32Array(playerPos));
 
-        // chasePlayer makes obstacles chase the player.
-        // returns true if any obstacles were moved, in which
-        // case the obstacle uniforms must be changed.
-        if (chasePlayer(obstacleChaseSpeed*deltaTime*0.0003/NUM_PHYSICS_SUBSTEPS)) {
-            setObstacleUniforms(obstacles);
-        }
+		// chasePlayer makes obstacles chase the player.
+		// returns true if any obstacles were moved, in which
+		// case the obstacle uniforms must be changed.
+		if (chasePlayer(obstacleChaseSpeed*deltaTime*0.0003/NUM_PHYSICS_SUBSTEPS)) {
+			setObstacleUniforms(obstacles);
+		}
 
-        // Move camera to player
-        cameraPos[1] = playerPos[1] + 4.5;
-        cameraPos[2] = playerPos[2] + 20.0;
+		// Move camera to player
+		cameraPos[1] = playerPos[1] + 4.5;
+		cameraPos[2] = playerPos[2] + 20.0;
 
 		// Move the projectile (if it exists, of course.)
 		if (projectileExists) {
@@ -1434,7 +1434,7 @@ function render(time) {
 
 		if (projectileExists &&
 			((projectilePos[2] - cameraPos[2]) < -288.0 ||
-			  projectilePos[2] < winPosition - 0.5)) {
+			projectilePos[2] < winPosition - 0.5)) {
 			// The projectile is out of view.
 			// So it's reshootable.
 			projectileExists = false;
@@ -1466,7 +1466,7 @@ function render(time) {
 		var collisionData = new Uint8Array(4);
 		gl.readPixels(0,0,1,1,gl.RGBA,gl.UNSIGNED_BYTE, collisionData);
 
-        var obstacleToRemove = null;
+		var obstacleToRemove = null;
 
 		if (collisionData[1] != 255) {
 			// Destroy projectile
@@ -1485,7 +1485,7 @@ function render(time) {
 		}
 
 		// Remove the obstacle
-        // (obviously we only do this if it's destroyable)
+		// (obviously we only do this if it's destroyable)
 		if (obstacleToRemove !== null && obstacles[obstacleToRemove].destroyable) {
 			obstacles[obstacleToRemove].exists = false;
 
@@ -1505,111 +1505,111 @@ function render(time) {
 	gl.uniform3fv(cameraPosUniform, new Float32Array(cameraPos));
 
 
-    // The following code is for actual rendering
+	// The following code is for actual rendering
 	// to the canvas.
 
 	// bind canvas as framebuffer
 	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
+	gl.clearColor(0.0, 0.0, 0.0, 1.0);
+	gl.clear(gl.COLOR_BUFFER_BIT);
 
 	gl.uniform1f(isCollisionDetectionUniform, false);
 
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
-    gl.finish();
+	gl.drawArrays(gl.TRIANGLES, 0, 6);
+	gl.finish();
 
-    // if the player is close to the win position,
-    // vibrate the canvas.
-    if (playerPos[2] <= winPosition + 50 && playerPos[2] > winPosition) {
-        var mag = (50 - (playerPos[2] - winPosition)) * 0.6;
-        var randX = random(-mag * 0.4, mag * 0.4);
-        // we want the random Y movement to be less
-        var randY = random(-mag * 0.1, mag * 0.1);
-        var randRot = random(-mag * 0.03, mag * 0.03);
+	// if the player is close to the win position,
+	// vibrate the canvas.
+	if (playerPos[2] <= winPosition + 50 && playerPos[2] > winPosition) {
+		var mag = (50 - (playerPos[2] - winPosition)) * 0.6;
+		var randX = random(-mag * 0.4, mag * 0.4);
+		// we want the random Y movement to be less
+		var randY = random(-mag * 0.1, mag * 0.1);
+		var randRot = random(-mag * 0.03, mag * 0.03);
 
-        container.style.transform = 'rotate(' + randRot + 'deg) translate(' + randX + 'px, ' + randY + 'px)';
-    }
+		container.style.transform = 'rotate(' + randRot + 'deg) translate(' + randX + 'px, ' + randY + 'px)';
+	}
 
-    // Now we do FPS calculation.
-    var fps = 1000/deltaTime;
-    fpsElement.innerHTML = "FPS: "+fps.toFixed(2);
-    
-    lastFrameTime = time;
+	// Now we do FPS calculation.
+	var fps = 1000/deltaTime;
+	fpsElement.innerHTML = "FPS: "+fps.toFixed(2);
+
+	lastFrameTime = time;
 }
 
 
 function takeScreenshot() {
-    // Takes a screenshot.
-    // https://stackoverflow.com/questions/8191083/can-one-easily-create-an-html-image-element-from-a-webgl-texture-object
+	// Takes a screenshot.
+	// https://stackoverflow.com/questions/8191083/can-one-easily-create-an-html-image-element-from-a-webgl-texture-object
 
-    // bind screenshot framebuffer
+	// bind screenshot framebuffer
 	gl.bindFramebuffer(gl.FRAMEBUFFER, screenshotFb);
 
-    // change viewport
-    gl.viewport(0, 0, screenshotWidth, screenshotHeight);
-    gl.uniform2f(screenSizeUniform, screenshotWidth, screenshotHeight);
+	// change viewport
+	gl.viewport(0, 0, screenshotWidth, screenshotHeight);
+	gl.uniform2f(screenSizeUniform, screenshotWidth, screenshotHeight);
 
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
+	gl.clearColor(0.0, 0.0, 0.0, 1.0);
+	gl.clear(gl.COLOR_BUFFER_BIT);
 
-    // just in case
+	// just in case
 	gl.uniform1f(isCollisionDetectionUniform, false);
 
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
-    gl.finish();
+	gl.drawArrays(gl.TRIANGLES, 0, 6);
+	gl.finish();
 
-    // reset viewport
-    gl.viewport(0, 0, canvas.width, canvas.height);
-    gl.uniform2f(screenSizeUniform, canvas.width, canvas.height);
+	// reset viewport
+	gl.viewport(0, 0, canvas.width, canvas.height);
+	gl.uniform2f(screenSizeUniform, canvas.width, canvas.height);
 
-    // screenshot information
-    gl.readPixels(0, 0, screenshotWidth, screenshotHeight, gl.RGBA, gl.UNSIGNED_BYTE, screenshotData);
+	// screenshot information
+	gl.readPixels(0, 0, screenshotWidth, screenshotHeight, gl.RGBA, gl.UNSIGNED_BYTE, screenshotData);
 
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
-    // WebGL uses a different coordinate system to canvas,
-    // so we have to invert it. We do this by
-    // storing the pixel information from WebGL, and then
-    // drawing the image onto itself but upside down.
-    screenshotCtx.setTransform(1, 0, 0, -1, 0, screenshotHeight);
-    var imageData = screenshotCtx.createImageData(screenshotWidth, screenshotHeight);
-    imageData.data.set(screenshotData);
-    // This does not take into account the transformation.
-    screenshotCtx.putImageData(imageData, 0, 0);
-    // This takes into account the transformation.
-    screenshotCtx.drawImage(screenshotCanvas, 0, 0);
+	// WebGL uses a different coordinate system to canvas,
+	// so we have to invert it. We do this by
+	// storing the pixel information from WebGL, and then
+	// drawing the image onto itself but upside down.
+	screenshotCtx.setTransform(1, 0, 0, -1, 0, screenshotHeight);
+	var imageData = screenshotCtx.createImageData(screenshotWidth, screenshotHeight);
+	imageData.data.set(screenshotData);
+	// This does not take into account the transformation.
+	screenshotCtx.putImageData(imageData, 0, 0);
+	// This takes into account the transformation.
+	screenshotCtx.drawImage(screenshotCanvas, 0, 0);
 
-    screenshotCanvas.toBlob(function(blob) {
-        var a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'screenshot.png';
-        a.innerHTML = 'download';
-        a.click();
-    });
+	screenshotCanvas.toBlob(function(blob) {
+		var a = document.createElement('a');
+		a.href = URL.createObjectURL(blob);
+		a.download = 'screenshot.png';
+		a.innerHTML = 'download';
+		a.click();
+	});
 }
 
 
 function handleContextLost(event) {
-    event.preventDefault();
-    console.log('The WebGL context was lost.');
-    if (gamePlaying) {
+	event.preventDefault();
+	console.log('The WebGL context was lost.');
+	if (gamePlaying) {
 		pauseGame();
 	}
 }
 
 
 function initGame() {
-    canvas = document.getElementById('canvas');
-    screenshotCanvas = document.getElementById('screenshot-canvas');
-    container = document.getElementById('container');
-    levelMenu = document.getElementById('levelMenu');
-    gameOverMenu = document.getElementById('gameOverMenu');
-    winMenu = document.getElementById('winMenu');
-    pauseButton = document.getElementById('pause');
-    pauseMenu = document.getElementById('pauseMenu');
+	canvas = document.getElementById('canvas');
+	screenshotCanvas = document.getElementById('screenshot-canvas');
+	container = document.getElementById('container');
+	levelMenu = document.getElementById('levelMenu');
+	gameOverMenu = document.getElementById('gameOverMenu');
+	winMenu = document.getElementById('winMenu');
+	pauseButton = document.getElementById('pause');
+	pauseMenu = document.getElementById('pauseMenu');
 	optionsMenu = document.getElementById('optionsMenu');
-    fpsElement = document.getElementById('fps');
+	fpsElement = document.getElementById('fps');
 	physicsSubstepsInput = document.getElementById('numPhysicsSubsteps');
 	optionsBackButton = document.getElementById('returnButton');
 	screenshotWInput = document.getElementById('screenshotW');
@@ -1617,113 +1617,113 @@ function initGame() {
 	countdown = document.getElementById('countdown');
 
 	// set default number of physics substeps
-    // for the input on the options page
+	// for the input on the options page
 	physicsSubstepsInput.value = NUM_PHYSICS_SUBSTEPS;
 
 	// set default screenshot size
-    // for the input on the options page
+	// for the input on the options page
 	screenshotWInput.value = screenshotWidth;
 	screenshotHInput.value = screenshotHeight;
-    
-    // set screenshot canvas size
-    screenshotCanvas.width = screenshotWidth;
-    screenshotCanvas.height = screenshotHeight;
 
-    // allows us to draw on the screenshot
-    // canvas, which in turn allows us to
-    // convert the drawn image to a png,
-    // which we can save locally.
-    screenshotCtx = screenshotCanvas.getContext('2d');
+	// set screenshot canvas size
+	screenshotCanvas.width = screenshotWidth;
+	screenshotCanvas.height = screenshotHeight;
 
-    gl = initWebGL(canvas);
-    
-    // gl is a falsey value if
-    // WebGL didn't initialise properly.
-    // We simply return since we have
-    // already alerted the user in
-    // initWebGL.
-    if (!gl) {
-        return;
-    }
-    
-    // If the WebGL context is lost,
-    // we should reload it.
-    canvas.addEventListener(
-        'webglcontextlost', handleContextLost, false
-    );
-    
-    // When restored, we redo the
-    // setup stages.
-    canvas.addEventListener(
-        'webglcontextrestored', setupWebGLState, false
-    );
-    
-    // Add buttons for level selection
-    // to the level select menu.
-    addLevelButtons(levelMenu);
+	// allows us to draw on the screenshot
+	// canvas, which in turn allows us to
+	// convert the drawn image to a png,
+	// which we can save locally.
+	screenshotCtx = screenshotCanvas.getContext('2d');
 
-    
-    // Now we create the shaders.
-    // The 'vertex shader' is run
-    // once per vertex, and is mostly
-    // irrelevant for our purposes.
-    // The 'fragment shader' is run
-    // once per fragment
-    // (a fragment is usually a pixel)
-    // and this is the shader that we
-    // are most interested in,
-    // since it will do most of the
-    // rendering.
+	gl = initWebGL(canvas);
 
-    // We use some XMLHttpRequests.
-    // We do this asynchronously,
-    // hence the nesting of
-    // 'onload' functions.
-    // The render loop handles the
-    // case that the shader has not
-    // yet compiled (i.e. the files
-    // have not yet been loaded),
-    // with the line
-    // if (program === null).
-    var vertReq = new XMLHttpRequest();
-    vertReq.onload = function() {
-        vertShaderSrc = this.response;
-        
-        var fragReq = new XMLHttpRequest();
-        fragReq.onload = function() {
-            fragShaderSrc = this.response;
-            
-            var obstReq = new XMLHttpRequest();
-            obstReq.onload = function() {
-                obstacleSrc = this.response;
+	// gl is a falsey value if
+	// WebGL didn't initialise properly.
+	// We simply return since we have
+	// already alerted the user in
+	// initWebGL.
+	if (!gl) {
+		return;
+	}
 
-                // Replace the placeholder in the fragment shader source
-                // with the obstacle source.
+	// If the WebGL context is lost,
+	// we should reload it.
+	canvas.addEventListener(
+		'webglcontextlost', handleContextLost, false
+	);
 
-                fragShaderSrc = fragShaderSrc.replace('_PLACEHOLDER_FOR_OBSTACLE_DISTANCE_FUNCTIONS', obstacleSrc);
+	// When restored, we redo the
+	// setup stages.
+	canvas.addEventListener(
+		'webglcontextrestored', setupWebGLState, false
+	);
 
-                setupWebGLState();
+	// Add buttons for level selection
+	// to the level select menu.
+	addLevelButtons(levelMenu);
 
-                // Add event listeners
-                // for the movement buttons
-                document.addEventListener("keydown", keyDownHandler, false);
-                document.addEventListener("keyup", keyUpHandler, false);
-                // Add event listener for tab change
-                // (pause)
-                document.addEventListener("visibilitychange", handleVisibilityChange, false);
 
-                // Launch into level selection
-                selectLevel();
-            };
-            obstReq.open("GET", "obstacles.glsl");
-            obstReq.responseType = "text";
-            obstReq.send();
-        };
-        fragReq.open("GET", "fragment-shader.glsl");
-        fragReq.responseType = "text";
-        fragReq.send();
-    };
-    vertReq.open("GET", "vertex-shader.glsl");
-    vertReq.responseType = "text";
-    vertReq.send();
+	// Now we create the shaders.
+	// The 'vertex shader' is run
+	// once per vertex, and is mostly
+	// irrelevant for our purposes.
+	// The 'fragment shader' is run
+	// once per fragment
+	// (a fragment is usually a pixel)
+	// and this is the shader that we
+	// are most interested in,
+	// since it will do most of the
+	// rendering.
+
+	// We use some XMLHttpRequests.
+	// We do this asynchronously,
+	// hence the nesting of
+	// 'onload' functions.
+	// The render loop handles the
+	// case that the shader has not
+	// yet compiled (i.e. the files
+	// have not yet been loaded),
+	// with the line
+	// if (program === null).
+	var vertReq = new XMLHttpRequest();
+	vertReq.onload = function() {
+		vertShaderSrc = this.response;
+
+		var fragReq = new XMLHttpRequest();
+		fragReq.onload = function() {
+			fragShaderSrc = this.response;
+
+			var obstReq = new XMLHttpRequest();
+			obstReq.onload = function() {
+				obstacleSrc = this.response;
+
+				// Replace the placeholder in the fragment shader source
+				// with the obstacle source.
+
+				fragShaderSrc = fragShaderSrc.replace('_PLACEHOLDER_FOR_OBSTACLE_DISTANCE_FUNCTIONS', obstacleSrc);
+
+				setupWebGLState();
+
+				// Add event listeners
+				// for the movement buttons
+				document.addEventListener("keydown", keyDownHandler, false);
+				document.addEventListener("keyup", keyUpHandler, false);
+				// Add event listener for tab change
+				// (pause)
+				document.addEventListener("visibilitychange", handleVisibilityChange, false);
+
+				// Launch into level selection
+				selectLevel();
+			};
+			obstReq.open("GET", "obstacles.glsl");
+			obstReq.responseType = "text";
+			obstReq.send();
+		};
+		fragReq.open("GET", "fragment-shader.glsl");
+		fragReq.responseType = "text";
+		fragReq.send();
+	};
+	vertReq.open("GET", "vertex-shader.glsl");
+	vertReq.responseType = "text";
+	vertReq.send();
 }
